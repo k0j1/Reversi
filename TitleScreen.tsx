@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Level, AppStats, LevelStats } from './types';
 
 export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLevel: (l: Level) => void, onStart: () => void }) => {
@@ -226,4 +226,3 @@ export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLev
     </div>
   );
 };
-    

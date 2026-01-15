@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Level, Cell, Board, BLACK, WHITE, EMPTY, AppStats } from './types';
 
 // --- Constants ---
@@ -210,7 +210,6 @@ export const Game = ({ level, onExit }: { level: Level, onExit: () => void }) =>
   const [validMoves, setValidMoves] = useState<{ r: number, c: number }[]>([]);
   const [aiThinking, setAiThinking] = useState(false);
   const [lastMove, setLastMove] = useState<{r: number, c: number} | null>(null);
-  const [gameLog, setGameLog] = useState<string>("Game Start!");
   const [toast, setToast] = useState<{msg: string, type: 'info' | 'warn'} | null>(null);
   
   // Use a ref to prevent double saving in strict mode
@@ -229,11 +228,9 @@ export const Game = ({ level, onExit }: { level: Level, onExit: () => void }) =>
       if (opponentMoves.length === 0) {
         setGameOver(true);
         const result = black > white ? "You Win! 🎉" : black < white ? "AI Wins 🤖" : "Draw! 🤝";
-        setGameLog(result);
         setToast({ msg: result, type: 'info' });
       } else {
         const message = `${turn === BLACK ? "You have no moves!" : "AI has no moves!"}`;
-        setGameLog(message);
         setToast({ msg: message + " Passing...", type: 'warn' });
         
         const timer = setTimeout(() => {
@@ -242,10 +239,6 @@ export const Game = ({ level, onExit }: { level: Level, onExit: () => void }) =>
         }, 2000);
         return () => clearTimeout(timer);
       }
-    } else {
-        if (!aiThinking && !gameOver) {
-            setGameLog(turn === BLACK ? `Your Turn` : `AI Thinking...`);
-        }
     }
   }, [board, turn]);
 
