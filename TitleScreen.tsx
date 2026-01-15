@@ -192,10 +192,6 @@ export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLev
                 </div>
 
                 {activeTab === 'GAME' ? renderGameContent() : renderStatsContent()}
-                
-                <div className="text-slate-400 text-sm font-semibold pb-4">
-                    Powered by Google Gemini
-                </div>
             </div>
         </div>
 

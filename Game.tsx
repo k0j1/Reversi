@@ -309,7 +309,7 @@ export const Game = ({ level, onExit }: { level: Level, onExit: () => void }) =>
   };
 
   return (
-    <div className="flex flex-col items-center gap-6 p-4 w-full max-w-2xl animate-fade-in relative">
+    <div className="flex flex-col items-center gap-4 sm:gap-6 p-2 sm:p-4 w-full max-w-2xl animate-fade-in relative">
         {/* Toast Notification */}
         {toast && (
           <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 animate-bounce pointer-events-none w-[90%] max-w-sm flex justify-center">
@@ -330,12 +330,12 @@ export const Game = ({ level, onExit }: { level: Level, onExit: () => void }) =>
         )}
 
         <div className="flex flex-col items-center gap-2 text-center w-full">
-            <div className="flex gap-4 items-center bg-white p-2 pr-6 pl-6 rounded-[2rem] shadow-sm border border-slate-200">
+            <div className="flex gap-2 sm:gap-4 items-center bg-white p-2 sm:p-2 pr-4 pl-4 sm:pr-6 sm:pl-6 rounded-[2rem] shadow-sm border border-slate-200">
                 
                 {/* Player Score */}
                 <div className={`flex flex-col items-center transition-all duration-300 ${turn === BLACK ? 'scale-110 opacity-100' : 'opacity-60 scale-95'}`}>
                     <div className="relative">
-                        <div className="w-12 h-12 rounded-full bg-slate-800 shadow-md border-2 border-slate-600 flex items-center justify-center">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-800 shadow-md border-2 border-slate-600 flex items-center justify-center">
                             <span className="text-white font-bold text-lg">{scores.black}</span>
                         </div>
                         {turn === BLACK && <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full animate-pulse"></div>}
@@ -343,22 +343,22 @@ export const Game = ({ level, onExit }: { level: Level, onExit: () => void }) =>
                     <span className="text-xs font-bold text-slate-500 mt-1">YOU</span>
                 </div>
 
-                <div className="h-8 w-px bg-slate-200 mx-2"></div>
+                <div className="h-8 w-px bg-slate-200 mx-1 sm:mx-2"></div>
 
                 {/* Status Text */}
-                <div className="w-32 text-center">
+                <div className="w-24 sm:w-32 text-center">
                     <span className={`text-sm font-bold block ${turn === BLACK ? 'text-green-600' : 'text-orange-500'}`}>
                         {gameOver ? "FINISHED" : turn === BLACK ? "YOUR TURN" : "AI THINKING"}
                     </span>
                     <span className="text-xs text-slate-400 font-medium">Lv.{level} Match</span>
                 </div>
 
-                <div className="h-8 w-px bg-slate-200 mx-2"></div>
+                <div className="h-8 w-px bg-slate-200 mx-1 sm:mx-2"></div>
 
                 {/* AI Score */}
                 <div className={`flex flex-col items-center transition-all duration-300 ${turn === WHITE ? 'scale-110 opacity-100' : 'opacity-60 scale-95'}`}>
                     <div className="relative">
-                        <div className="w-12 h-12 rounded-full bg-white shadow-md border-2 border-slate-200 flex items-center justify-center">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white shadow-md border-2 border-slate-200 flex items-center justify-center">
                             <span className="text-slate-800 font-bold text-lg">{scores.white}</span>
                         </div>
                         {turn === WHITE && <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 border-2 border-white rounded-full animate-pulse"></div>}
@@ -368,11 +368,11 @@ export const Game = ({ level, onExit }: { level: Level, onExit: () => void }) =>
             </div>
         </div>
 
-        {/* Game Board */}
-        <div className="relative group">
-            <div className="bg-orange-100 p-3 rounded-[2rem] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border-b-8 border-orange-200">
+        {/* Game Board - w-full applied to container, aspect-square on cells */}
+        <div className="relative group w-full px-0.5 sm:px-0">
+            <div className="bg-orange-100 p-1.5 sm:p-3 rounded-[1.5rem] sm:rounded-[2rem] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border-b-4 sm:border-b-8 border-orange-200">
                 {/* Grid gap creates the lines. Using dark green for lines. */}
-                <div className="grid grid-cols-8 gap-0.5 sm:gap-1 bg-green-900 p-1 sm:p-2 rounded-[1.5rem] border-4 border-green-800">
+                <div className="grid grid-cols-8 gap-0.5 sm:gap-1 bg-green-900 p-0.5 sm:p-2 rounded-[1rem] sm:rounded-[1.5rem] border-2 sm:border-4 border-green-800">
                 {board.map((row, r) => (
                     row.map((cell, c) => {
                     const isValid = turn === BLACK && !gameOver && validMoves.some(m => m.r === r && m.c === c);
@@ -382,8 +382,8 @@ export const Game = ({ level, onExit }: { level: Level, onExit: () => void }) =>
                         <div 
                         key={`${r}-${c}`} 
                         className={`
-                            w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14
-                            rounded-md sm:rounded-lg relative flex items-center justify-center
+                            w-full aspect-square
+                            rounded-sm sm:rounded-lg relative flex items-center justify-center
                             cursor-pointer select-none cell-perspective
                             transition-all duration-200
                             ${isValid 
