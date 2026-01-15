@@ -25,9 +25,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: 'npm'
+          # cache: 'npm' # package-lock.jsonがない場合エラーになるためコメントアウト
       - name: Install dependencies
-        run: npm ci
+        run: npm install # npm ci はロックファイル必須のため、npm installに変更
       - name: Build
         run: npm run build
       - name: Upload artifact
