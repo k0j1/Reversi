@@ -11,9 +11,16 @@ export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLev
         try {
             const data = localStorage.getItem('reversi_pop_stats');
             if (data) {
-                setStats(JSON.parse(data));
+                const parsed = JSON.parse(data);
+                const initial: AppStats = {
+                    1: { win: 0, loss: 0, draw: 0 },
+                    2: { win: 0, loss: 0, draw: 0 },
+                    3: { win: 0, loss: 0, draw: 0 },
+                    4: { win: 0, loss: 0, draw: 0 },
+                    5: { win: 0, loss: 0, draw: 0 },
+                };
+                setStats({ ...initial, ...parsed });
             } else {
-                // Initialize if empty
                 setStats({
                     1: { win: 0, loss: 0, draw: 0 },
                     2: { win: 0, loss: 0, draw: 0 },
@@ -28,22 +35,39 @@ export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLev
     }
   }, [activeTab]);
 
+  const getLevelLabel = (l: number) => {
+      switch(l) {
+          case 1: return 'Beginner';
+          case 2: return 'Novice';
+          case 3: return 'Normal';
+          case 4: return 'Strong';
+          case 5: return 'Master';
+          default: return 'Normal';
+      }
+  };
+
+  const getLevelColor = (l: number) => {
+      switch(l) {
+          case 1: return 'bg-green-100 text-green-600 border-green-200';
+          case 2: return 'bg-sky-100 text-sky-600 border-sky-200';
+          case 3: return 'bg-yellow-100 text-yellow-600 border-yellow-200';
+          case 4: return 'bg-orange-100 text-orange-600 border-orange-200';
+          case 5: return 'bg-red-100 text-red-600 border-red-200';
+          default: return 'bg-slate-100 text-slate-600 border-slate-200';
+      }
+  };
+
   const renderGameContent = () => (
     <div className="w-full bg-white p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] space-y-8 border-2 border-slate-100 animate-fade-in">
         <div className="space-y-4">
             <div className="flex justify-between items-center px-1">
-                <label className="text-xl font-bold text-slate-700">AI Level</label>
-                <span className={`text-lg font-bold px-4 py-1 rounded-full border-2 
-                    ${level === 1 ? 'bg-green-100 text-green-600 border-green-200' : 
-                      level === 2 ? 'bg-sky-100 text-sky-600 border-sky-200' :
-                      level === 3 ? 'bg-yellow-100 text-yellow-600 border-yellow-200' :
-                      level === 4 ? 'bg-orange-100 text-orange-600 border-orange-200' :
-                      'bg-red-100 text-red-600 border-red-200'}`}>
-                    Lv. {level}
+                <label className="text-xl font-bold text-slate-700">AI Strength</label>
+                <span className={`text-lg font-bold px-4 py-1 rounded-full border-2 ${getLevelColor(level)}`}>
+                    Lv.{level} {getLevelLabel(level)}
                 </span>
             </div>
             
-            <div className="relative pt-2 pb-6">
+            <div className="relative pt-2 pb-8">
                 <input 
                     type="range" 
                     min="1" 
@@ -54,30 +78,19 @@ export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLev
                     className="w-full h-4 bg-slate-200 rounded-full appearance-none cursor-pointer accent-orange-500 hover:accent-orange-400 focus:outline-none"
                     style={{
                         background: `linear-gradient(to right, 
-                            ${level >= 1 ? '#fb923c' : '#e2e8f0'} 0%, 
-                            ${level >= 2 ? '#fb923c' : '#e2e8f0'} 25%, 
-                            ${level >= 3 ? '#fb923c' : '#e2e8f0'} 50%, 
-                            ${level >= 4 ? '#fb923c' : '#e2e8f0'} 75%, 
-                            ${level >= 5 ? '#fb923c' : '#e2e8f0'} 100%)`
+                            #fb923c 0%, 
+                            #fb923c ${(level - 1) * 25}%, 
+                            #e2e8f0 ${(level - 1) * 25}%, 
+                            #e2e8f0 100%)`
                     }}
                 />
                 <div className="flex justify-between text-xs text-slate-400 font-bold mt-3 px-1">
-                    <span>Beginner</span>
-                    <span>Normal</span>
-                    <span>Hard</span>
-                    <span>Very Hard</span>
-                    <span>Master</span>
+                    <span>Lv.1</span>
+                    <span>Lv.2</span>
+                    <span>Lv.3</span>
+                    <span>Lv.4</span>
+                    <span>Lv.5</span>
                 </div>
-            </div>
-            
-            <div className="bg-slate-50 p-4 rounded-xl text-center border border-slate-100">
-                <p className="text-slate-600 font-medium">
-                    {level === 1 && "Random moves. Great for learning!"}
-                    {level === 2 && "Thinks 1 step ahead. A fair challenge."}
-                    {level === 3 && "Thinks 2 steps ahead. Getting serious."}
-                    {level === 4 && "Thinks 3 steps ahead. Pro level."}
-                    {level === 5 && "Deep search strategy. Good luck!"}
-                </p>
             </div>
         </div>
 
@@ -93,28 +106,48 @@ export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLev
     </div>
   );
 
+  const renderOtherApps = () => (
+     <div className="w-full animate-fade-in flex flex-col items-start gap-4 px-2">
+        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Other Apps</span>
+        <a 
+            href="https://farcaster.xyz/miniapps/7RH3c4fEALgF/runningchihuahua" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="group relative block w-16 h-16 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 ring-4 ring-white"
+        >
+            <img 
+                src="https://runningchihuahuaai.k0j1.v2002.coreserver.jp/images/icon.png" 
+                alt="Running Chihuahua" 
+                className="w-full h-full object-cover"
+            />
+        </a>
+     </div>
+  );
+
   const renderStatsContent = () => (
     <div className="w-full space-y-4 animate-fade-in pb-20">
         <h2 className="text-2xl font-bold text-slate-700 text-center mb-6">Your Records</h2>
-        {stats && (Object.entries(stats) as [string, LevelStats][]).map(([lvl, data]) => {
+        {stats && ([1, 2, 3, 4, 5] as Level[]).map((lvl) => {
+            const data = stats[lvl] || { win: 0, loss: 0, draw: 0 };
             const total = data.win + data.loss + data.draw;
             const winRate = total > 0 ? Math.round((data.win / total) * 100) : 0;
-            const l = Number(lvl) as Level;
             
-            const colorClass = 
-                l === 1 ? 'text-green-500 bg-green-50 border-green-200' :
-                l === 2 ? 'text-sky-500 bg-sky-50 border-sky-200' :
-                l === 3 ? 'text-yellow-500 bg-yellow-50 border-yellow-200' :
-                l === 4 ? 'text-orange-500 bg-orange-50 border-orange-200' :
-                'text-red-500 bg-red-50 border-red-200';
-
+            let colorClass = '';
+            switch(lvl) {
+                case 1: colorClass = 'text-green-500 bg-green-50 border-green-200'; break;
+                case 2: colorClass = 'text-sky-500 bg-sky-50 border-sky-200'; break;
+                case 3: colorClass = 'text-yellow-500 bg-yellow-50 border-yellow-200'; break;
+                case 4: colorClass = 'text-orange-500 bg-orange-50 border-orange-200'; break;
+                case 5: colorClass = 'text-red-500 bg-red-50 border-red-200'; break;
+            }
+            
             return (
                 <div key={lvl} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-3">
                     <div className="flex justify-between items-center">
                         <span className={`font-bold px-3 py-1 rounded-full text-sm border ${colorClass}`}>
-                            Level {lvl}
+                            Lv.{lvl} {getLevelLabel(lvl)}
                         </span>
-                        <span className="text-slate-400 text-xs font-bold">Total Games: {total}</span>
+                        <span className="text-slate-400 text-xs font-bold">Total: {total}</span>
                     </div>
                     
                     {total === 0 ? (
@@ -191,7 +224,12 @@ export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLev
                     <p className="text-slate-500 font-bold text-lg">Can you beat the AI?</p>
                 </div>
 
-                {activeTab === 'GAME' ? renderGameContent() : renderStatsContent()}
+                {activeTab === 'GAME' ? (
+                    <>
+                        {renderGameContent()}
+                        {renderOtherApps()}
+                    </>
+                ) : renderStatsContent()}
             </div>
         </div>
 
