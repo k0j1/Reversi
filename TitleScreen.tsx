@@ -57,7 +57,8 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
 
   const connectWallet = useCallback(async () => {
     try {
-        const result = await sdk.actions.ethProvider.request({ method: 'eth_requestAccounts' });
+        // Cast to any to avoid TS error as types might not be updated for ethProvider yet
+        const result = await (sdk.actions as any).ethProvider.request({ method: 'eth_requestAccounts' });
         if (result && Array.isArray(result) && result.length > 0) {
             setConnectedAddress(result[0]);
         }
