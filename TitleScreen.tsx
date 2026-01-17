@@ -57,17 +57,23 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
 
   const connectWallet = useCallback(async () => {
     try {
-        // Safe access to SDK provider
-        const actions = sdk.actions as any;
-        const sdkProvider = actions?.ethProvider;
+        // Based on reference code: try sdk.wallet.ethProvider first
+        const safeSdk = sdk as any;
+        let provider = safeSdk.wallet?.ethProvider || safeSdk.actions?.ethProvider;
         
-        // Safe access to Window provider (fallback for browser/testing)
-        const windowProvider = (window as any).ethereum;
-        
-        const provider = sdkProvider || windowProvider;
+        // Fallback to window.ethereum (for testing in browser)
+        if (!provider && (window as any).ethereum) {
+            provider = (window as any).ethereum;
+        }
 
         if (!provider) {
              console.error("No wallet provider found. Please use Warpcast or a Web3 browser.");
+             // If no provider, try to fall back to verified address for display
+             if (user?.verifiedAddresses?.[0]) {
+                 setConnectedAddress(user.verifiedAddresses[0]);
+             } else if (user?.custodyAddress) {
+                 setConnectedAddress(user.custodyAddress);
+             }
              return;
         }
 
@@ -77,8 +83,12 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
         }
     } catch (e) {
         console.error("Failed to connect wallet", e);
+        // Fallback on error
+        if (user?.verifiedAddresses?.[0]) {
+            setConnectedAddress(user.verifiedAddresses[0]);
+        }
     }
-  }, []);
+  }, [user]);
 
   // Auto-connect when profile is opened
   useEffect(() => {
@@ -170,7 +180,7 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
                     
                     {/* Connected Address */}
                     <div className="space-y-1">
-                        <span className="text-xs font-bold text-slate-500 pl-1">Connected Address</span>
+                        <span className="text-xs font-bold text-slate-500 pl-1">Primary Address</span>
                         {connectedAddress ? (
                              <div className="bg-green-50 p-3 rounded-xl border border-green-100 break-all text-xs font-mono text-green-700 select-all hover:bg-green-100 transition-colors">
                                 {connectedAddress}
@@ -188,27 +198,26 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
                         )}
                     </div>
 
-                    {/* Custody Address (Fallback if available in context) */}
-                    {user.custodyAddress && (
-                        <div className="space-y-1">
-                            <span className="text-xs font-bold text-slate-500 pl-1">Custody Address</span>
-                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 break-all text-xs font-mono text-slate-600 select-all hover:bg-slate-100 transition-colors">
-                                {user.custodyAddress}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Verified Addresses (Fallback if available in context) */}
-                    {user.verifiedAddresses && user.verifiedAddresses.length > 0 && (
-                        <div className="space-y-1">
-                            <span className="text-xs font-bold text-slate-500 pl-1">Verified Addresses</span>
-                            <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
-                                {user.verifiedAddresses.map((addr, i) => (
-                                    <div key={i} className="bg-slate-50 p-3 rounded-xl border border-slate-100 break-all text-xs font-mono text-slate-600 select-all hover:bg-slate-100 transition-colors">
-                                        {addr}
-                                    </div>
+                    {/* Other Addresses */}
+                    {(user.custodyAddress || (user.verifiedAddresses && user.verifiedAddresses.length > 0)) && (
+                        <div className="pt-2">
+                             <span className="text-xs font-bold text-slate-400 pl-1 mb-2 block">Other Addresses</span>
+                             <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
+                                {user.verifiedAddresses?.map((addr, i) => (
+                                    addr !== connectedAddress && (
+                                        <div key={i} className="bg-slate-50 p-2 rounded-lg border border-slate-100 break-all text-[10px] font-mono text-slate-500 select-all">
+                                            <span className="text-slate-400 font-bold mr-1">Verified:</span>
+                                            {addr}
+                                        </div>
+                                    )
                                 ))}
-                            </div>
+                                {user.custodyAddress && user.custodyAddress !== connectedAddress && (
+                                    <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 break-all text-[10px] font-mono text-slate-500 select-all">
+                                        <span className="text-slate-400 font-bold mr-1">Custody:</span>
+                                        {user.custodyAddress}
+                                    </div>
+                                )}
+                             </div>
                         </div>
                     )}
                 </div>
