@@ -1,6 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import sdk from '@farcaster/frame-sdk';
+import { useState, useEffect } from 'react';
 import { Level, AppStats, LevelStats, FarcasterUser } from './types';
 
 const INITIAL_LEVEL_STATS: LevelStats = { win: 0, loss: 0, draw: 0 };
@@ -16,11 +15,19 @@ const INITIAL_STATS: AppStats = {
     points: 0
 };
 
-export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, setLevel: (l: Level) => void, onStart: () => void, user?: FarcasterUser }) => {
+type TitleScreenProps = {
+    level: Level;
+    setLevel: (l: Level) => void;
+    onStart: () => void;
+    user?: FarcasterUser;
+    connectedAddress: string | null;
+    connectWallet: () => Promise<void>;
+};
+
+export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, connectWallet }: TitleScreenProps) => {
   const [activeTab, setActiveTab] = useState<'GAME' | 'STATS'>('GAME');
   const [stats, setStats] = useState<AppStats | null>(null);
   const [showProfile, setShowProfile] = useState(false);
-  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeTab === 'STATS') {
@@ -54,41 +61,6 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
         }
     }
   }, [activeTab]);
-
-  const connectWallet = useCallback(async () => {
-    try {
-        // Based on reference code: try sdk.wallet.ethProvider first
-        const safeSdk = sdk as any;
-        let provider = safeSdk.wallet?.ethProvider || safeSdk.actions?.ethProvider;
-        
-        // Fallback to window.ethereum (for testing in browser)
-        if (!provider && (window as any).ethereum) {
-            provider = (window as any).ethereum;
-        }
-
-        if (!provider) {
-             console.error("No wallet provider found. Please use Warpcast or a Web3 browser.");
-             // If no provider, try to fall back to verified address for display
-             if (user?.verifiedAddresses?.[0]) {
-                 setConnectedAddress(user.verifiedAddresses[0]);
-             } else if (user?.custodyAddress) {
-                 setConnectedAddress(user.custodyAddress);
-             }
-             return;
-        }
-
-        const result = await provider.request({ method: 'eth_requestAccounts' });
-        if (result && Array.isArray(result) && result.length > 0) {
-            setConnectedAddress(result[0]);
-        }
-    } catch (e) {
-        console.error("Failed to connect wallet", e);
-        // Fallback on error
-        if (user?.verifiedAddresses?.[0]) {
-            setConnectedAddress(user.verifiedAddresses[0]);
-        }
-    }
-  }, [user]);
 
   // Auto-connect when profile is opened
   useEffect(() => {
