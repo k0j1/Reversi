@@ -1,7 +1,6 @@
 
 import { Board, Cell, Level } from '../types';
 import { searchBestMove } from './minimax';
-import { getValidMoves } from '../gameLogic';
 
 /**
  * Returns the best move for the AI based on the selected difficulty level.

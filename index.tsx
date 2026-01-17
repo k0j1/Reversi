@@ -17,14 +17,16 @@ const App = () => {
     const load = async () => {
       const context = await sdk.context;
       if (context?.user) {
+        // Cast to any because the SDK types might not cover all properties yet
+        const u = context.user as any; 
         setUser({
           fid: context.user.fid,
           username: context.user.username,
           displayName: context.user.displayName,
           pfpUrl: context.user.pfpUrl,
-          // Extract wallet info
-          custodyAddress: context.user.custodyAddress,
-          verifiedAddresses: context.user.verifiedAddresses as string[],
+          // Extract wallet info safely
+          custodyAddress: u.custodyAddress,
+          verifiedAddresses: u.verifiedAddresses as string[],
         });
       }
       sdk.actions.ready();
