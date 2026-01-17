@@ -1,5 +1,6 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import sdk from '@farcaster/frame-sdk';
 import { Level, AppStats, LevelStats, FarcasterUser } from './types';
 
 const INITIAL_LEVEL_STATS: LevelStats = { win: 0, loss: 0, draw: 0 };
@@ -19,6 +20,7 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
   const [activeTab, setActiveTab] = useState<'GAME' | 'STATS'>('GAME');
   const [stats, setStats] = useState<AppStats | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeTab === 'STATS') {
@@ -52,6 +54,24 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
         }
     }
   }, [activeTab]);
+
+  const connectWallet = useCallback(async () => {
+    try {
+        const result = await sdk.actions.ethProvider.request({ method: 'eth_requestAccounts' });
+        if (result && Array.isArray(result) && result.length > 0) {
+            setConnectedAddress(result[0]);
+        }
+    } catch (e) {
+        console.error("Failed to connect wallet", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showProfile) {
+        // Try to get address if already connected
+        connectWallet();
+    }
+  }, [showProfile, connectWallet]);
 
   const getLevelLabel = (l: number) => {
       switch(l) {
@@ -134,18 +154,40 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
                         <h4 className="text-sm font-black text-slate-400 uppercase tracking-wider">Wallet Information</h4>
                     </div>
                     
-                    {/* Custody Address */}
+                    {/* Connected Address */}
                     <div className="space-y-1">
-                        <span className="text-xs font-bold text-slate-500 pl-1">Custody Address</span>
-                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 break-all text-xs font-mono text-slate-600 select-all hover:bg-slate-100 transition-colors">
-                            {user.custodyAddress || "Not available"}
-                        </div>
+                        <span className="text-xs font-bold text-slate-500 pl-1">Connected Address</span>
+                        {connectedAddress ? (
+                             <div className="bg-green-50 p-3 rounded-xl border border-green-100 break-all text-xs font-mono text-green-700 select-all hover:bg-green-100 transition-colors">
+                                {connectedAddress}
+                             </div>
+                        ) : (
+                            <button 
+                                onClick={connectWallet}
+                                className="w-full bg-slate-800 text-white text-xs font-bold py-3 px-4 rounded-xl hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                Connect Wallet
+                            </button>
+                        )}
                     </div>
 
-                    {/* Verified Addresses */}
-                     <div className="space-y-1">
-                        <span className="text-xs font-bold text-slate-500 pl-1">Verified Addresses</span>
-                        {user.verifiedAddresses && user.verifiedAddresses.length > 0 ? (
+                    {/* Custody Address (Fallback if available in context) */}
+                    {user.custodyAddress && (
+                        <div className="space-y-1">
+                            <span className="text-xs font-bold text-slate-500 pl-1">Custody Address</span>
+                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 break-all text-xs font-mono text-slate-600 select-all hover:bg-slate-100 transition-colors">
+                                {user.custodyAddress}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Verified Addresses (Fallback if available in context) */}
+                    {user.verifiedAddresses && user.verifiedAddresses.length > 0 && (
+                        <div className="space-y-1">
+                            <span className="text-xs font-bold text-slate-500 pl-1">Verified Addresses</span>
                             <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
                                 {user.verifiedAddresses.map((addr, i) => (
                                     <div key={i} className="bg-slate-50 p-3 rounded-xl border border-slate-100 break-all text-xs font-mono text-slate-600 select-all hover:bg-slate-100 transition-colors">
@@ -153,10 +195,8 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
                                     </div>
                                 ))}
                             </div>
-                        ) : (
-                            <div className="text-xs text-slate-400 italic pl-1">No verified addresses linked.</div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
                 
                 <div className="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-auto">
