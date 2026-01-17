@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import sdk, { type FrameContext } from '@farcaster/frame-sdk';
+import sdk from '@farcaster/frame-sdk';
 import { Game } from './Game';
 import { TitleScreen } from './TitleScreen';
 import { Level, FarcasterUser } from './types';
