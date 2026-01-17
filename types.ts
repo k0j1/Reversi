@@ -13,4 +13,8 @@ export type LevelStats = {
     draw: number;
 };
 
-export type AppStats = Record<Level, LevelStats>;
+export type AppStats = {
+    levels: Record<Level, LevelStats>;
+    total: LevelStats;
+    points: number;
+};

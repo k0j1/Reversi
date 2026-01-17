@@ -30,8 +30,7 @@ export const useGameLogic = (level: Level) => {
       
       if (opponentMoves.length === 0) {
         setGameOver(true);
-        const result = black > white ? "You Win! 🎉" : black < white ? "AI Wins 🤖" : "Draw! 🤝";
-        setToast({ msg: result, type: 'info' });
+        // Toast for game over is handled by the ResultOverlay in Game.tsx now
       } else {
         const message = `${turn === BLACK ? "You have no moves!" : "AI has no moves!"}`;
         setToast({ msg: message + " Passing...", type: 'warn' });

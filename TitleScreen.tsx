@@ -1,6 +1,19 @@
 
 import { useState, useEffect } from 'react';
-import { Level, AppStats } from './types';
+import { Level, AppStats, LevelStats } from './types';
+
+const INITIAL_LEVEL_STATS: LevelStats = { win: 0, loss: 0, draw: 0 };
+const INITIAL_STATS: AppStats = {
+    levels: {
+        1: { ...INITIAL_LEVEL_STATS },
+        2: { ...INITIAL_LEVEL_STATS },
+        3: { ...INITIAL_LEVEL_STATS },
+        4: { ...INITIAL_LEVEL_STATS },
+        5: { ...INITIAL_LEVEL_STATS },
+    },
+    total: { ...INITIAL_LEVEL_STATS },
+    points: 0
+};
 
 export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLevel: (l: Level) => void, onStart: () => void }) => {
   const [activeTab, setActiveTab] = useState<'GAME' | 'STATS'>('GAME');
@@ -12,25 +25,26 @@ export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLev
             const data = localStorage.getItem('reversi_pop_stats');
             if (data) {
                 const parsed = JSON.parse(data);
-                const initial: AppStats = {
-                    1: { win: 0, loss: 0, draw: 0 },
-                    2: { win: 0, loss: 0, draw: 0 },
-                    3: { win: 0, loss: 0, draw: 0 },
-                    4: { win: 0, loss: 0, draw: 0 },
-                    5: { win: 0, loss: 0, draw: 0 },
-                };
-                setStats({ ...initial, ...parsed });
+                let loadedStats: AppStats = JSON.parse(JSON.stringify(INITIAL_STATS));
+
+                // Migration logic for display
+                if (!parsed.levels && parsed[1]) {
+                     loadedStats.levels = { ...loadedStats.levels, ...parsed };
+                     Object.values(loadedStats.levels).forEach((lvlStats: any) => {
+                        loadedStats.total.win += lvlStats.win || 0;
+                        loadedStats.total.loss += lvlStats.loss || 0;
+                        loadedStats.total.draw += lvlStats.draw || 0;
+                    });
+                } else {
+                    loadedStats = { ...INITIAL_STATS, ...parsed };
+                }
+                setStats(loadedStats);
             } else {
-                setStats({
-                    1: { win: 0, loss: 0, draw: 0 },
-                    2: { win: 0, loss: 0, draw: 0 },
-                    3: { win: 0, loss: 0, draw: 0 },
-                    4: { win: 0, loss: 0, draw: 0 },
-                    5: { win: 0, loss: 0, draw: 0 },
-                });
+                setStats(INITIAL_STATS);
             }
         } catch (e) {
             console.error("Failed to load stats", e);
+            setStats(INITIAL_STATS);
         }
     }
   }, [activeTab]);
@@ -126,66 +140,91 @@ export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLev
 
   const renderStatsContent = () => (
     <div className="w-full space-y-4 animate-fade-in">
-        <h2 className="text-2xl font-bold text-slate-700 text-center mb-6">Your Records</h2>
-        {stats && ([1, 2, 3, 4, 5] as Level[]).map((lvl) => {
-            const data = stats[lvl] || { win: 0, loss: 0, draw: 0 };
-            const total = data.win + data.loss + data.draw;
-            const winRate = total > 0 ? Math.round((data.win / total) * 100) : 0;
-            
-            let colorClass = '';
-            switch(lvl) {
-                case 1: colorClass = 'text-green-500 bg-green-50 border-green-200'; break;
-                case 2: colorClass = 'text-sky-500 bg-sky-50 border-sky-200'; break;
-                case 3: colorClass = 'text-yellow-500 bg-yellow-50 border-yellow-200'; break;
-                case 4: colorClass = 'text-orange-500 bg-orange-50 border-orange-200'; break;
-                case 5: colorClass = 'text-red-500 bg-red-50 border-red-200'; break;
-            }
-            
-            return (
-                <div key={lvl} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-3">
-                    <div className="flex justify-between items-center">
-                        <span className={`font-bold px-3 py-1 rounded-full text-sm border ${colorClass}`}>
-                            Lv.{lvl} {getLevelLabel(lvl)}
-                        </span>
-                        <span className="text-slate-400 text-xs font-bold">Total: {total}</span>
+        <h2 className="text-2xl font-bold text-slate-700 text-center mb-4">Your Records</h2>
+        
+        {stats && (
+            <>
+                {/* Total Score & Points Card */}
+                <div className="bg-gradient-to-br from-slate-800 to-slate-700 p-6 rounded-[2rem] shadow-lg text-white mb-6 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                    <div className="relative z-10 flex flex-col items-center gap-2">
+                        <span className="text-slate-300 text-sm font-bold uppercase tracking-wider">Total Points</span>
+                        <span className="text-5xl font-black text-yellow-400 drop-shadow-md">{stats.points.toLocaleString()}</span>
+                        <div className="h-px w-full bg-white/10 my-2"></div>
+                        <div className="flex justify-between w-full px-4 text-sm font-bold">
+                            <div className="flex flex-col items-center">
+                                <span className="text-green-400 text-lg">{stats.total.win}</span>
+                                <span className="text-slate-400 text-xs">Wins</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="text-white text-lg">{stats.total.draw}</span>
+                                <span className="text-slate-400 text-xs">Draws</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="text-orange-400 text-lg">{stats.total.loss}</span>
+                                <span className="text-slate-400 text-xs">Losses</span>
+                            </div>
+                        </div>
                     </div>
+                </div>
+
+                {/* Level Breakdown */}
+                <h3 className="text-lg font-bold text-slate-500 px-2">Level Breakdown</h3>
+                {([1, 2, 3, 4, 5] as Level[]).map((lvl) => {
+                    const data = stats.levels[lvl] || { win: 0, loss: 0, draw: 0 };
+                    const total = data.win + data.loss + data.draw;
+                    const winRate = total > 0 ? Math.round((data.win / total) * 100) : 0;
                     
-                    {total === 0 ? (
-                        <div className="text-center text-slate-400 text-sm py-2">No games played yet.</div>
-                    ) : (
-                        <>
-                            <div className="flex justify-between text-sm font-bold text-slate-600 px-1">
-                                <span className="text-green-600">Wins: {data.win}</span>
-                                <span className="text-slate-400">Draws: {data.draw}</span>
-                                <span className="text-orange-600">Losses: {data.loss}</span>
+                    let colorClass = '';
+                    switch(lvl) {
+                        case 1: colorClass = 'text-green-500 bg-green-50 border-green-200'; break;
+                        case 2: colorClass = 'text-sky-500 bg-sky-50 border-sky-200'; break;
+                        case 3: colorClass = 'text-yellow-500 bg-yellow-50 border-yellow-200'; break;
+                        case 4: colorClass = 'text-orange-500 bg-orange-50 border-orange-200'; break;
+                        case 5: colorClass = 'text-red-500 bg-red-50 border-red-200'; break;
+                    }
+                    
+                    return (
+                        <div key={lvl} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-3">
+                            <div className="flex justify-between items-center">
+                                <span className={`font-bold px-3 py-1 rounded-full text-sm border ${colorClass}`}>
+                                    Lv.{lvl} {getLevelLabel(lvl)}
+                                </span>
+                                <span className="text-slate-400 text-xs font-bold">Matches: {total}</span>
                             </div>
                             
-                            {/* Win Rate Bar */}
-                            <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                                <div style={{ width: `${(data.win / total) * 100}%` }} className="h-full bg-green-500"></div>
-                                <div style={{ width: `${(data.draw / total) * 100}%` }} className="h-full bg-slate-300"></div>
-                                <div style={{ width: `${(data.loss / total) * 100}%` }} className="h-full bg-orange-500"></div>
-                            </div>
-                            <div className="text-right text-xs font-bold text-slate-400">
-                                Win Rate: {winRate}%
-                            </div>
-                        </>
-                    )}
-                </div>
-            );
-        })}
+                            {total === 0 ? (
+                                <div className="text-center text-slate-400 text-sm py-2">No games played yet.</div>
+                            ) : (
+                                <>
+                                    <div className="flex justify-between text-sm font-bold text-slate-600 px-1">
+                                        <span className="text-green-600">Wins: {data.win}</span>
+                                        <span className="text-slate-400">Draws: {data.draw}</span>
+                                        <span className="text-orange-600">Losses: {data.loss}</span>
+                                    </div>
+                                    
+                                    {/* Win Rate Bar */}
+                                    <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                                        <div style={{ width: `${(data.win / total) * 100}%` }} className="h-full bg-green-500"></div>
+                                        <div style={{ width: `${(data.draw / total) * 100}%` }} className="h-full bg-slate-300"></div>
+                                        <div style={{ width: `${(data.loss / total) * 100}%` }} className="h-full bg-orange-500"></div>
+                                    </div>
+                                    <div className="text-right text-xs font-bold text-slate-400">
+                                        Win Rate: {winRate}%
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    );
+                })}
+            </>
+        )}
         
         <button 
             onClick={() => {
-                if(confirm("Are you sure you want to reset all records?")) {
+                if(confirm("Are you sure you want to reset all records and points?")) {
                     localStorage.removeItem('reversi_pop_stats');
-                    setStats({
-                        1: { win: 0, loss: 0, draw: 0 },
-                        2: { win: 0, loss: 0, draw: 0 },
-                        3: { win: 0, loss: 0, draw: 0 },
-                        4: { win: 0, loss: 0, draw: 0 },
-                        5: { win: 0, loss: 0, draw: 0 },
-                    });
+                    setStats(INITIAL_STATS);
                 }
             }}
             className="w-full mt-4 py-2 text-slate-400 text-sm font-bold hover:text-red-500 transition-colors"
