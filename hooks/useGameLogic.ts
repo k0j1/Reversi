@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Level, Cell, Board, BLACK, WHITE, EMPTY } from '../types';
+import { Level, Cell, Board, BLACK, WHITE } from '../types';
 import { createInitialBoard, getValidMoves, applyMove, countDiscs } from '../gameLogic';
 import { getBestMove } from '../ai';
 import { useGameStats } from './useGameStats';

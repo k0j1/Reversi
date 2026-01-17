@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Level, AppStats, LevelStats } from './types';
+import { Level, AppStats } from './types';
 
 export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLevel: (l: Level) => void, onStart: () => void }) => {
   const [activeTab, setActiveTab] = useState<'GAME' | 'STATS'>('GAME');
