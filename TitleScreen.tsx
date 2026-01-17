@@ -107,7 +107,7 @@ export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLev
   );
 
   const renderOtherApps = () => (
-     <div className="w-full animate-fade-in flex flex-col items-start gap-4 px-2">
+     <div className="w-full animate-fade-in flex flex-col items-center gap-4 px-2">
         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Other Apps</span>
         <a 
             href="https://farcaster.xyz/miniapps/7RH3c4fEALgF/runningchihuahua" 
@@ -125,7 +125,7 @@ export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLev
   );
 
   const renderStatsContent = () => (
-    <div className="w-full space-y-4 animate-fade-in pb-20">
+    <div className="w-full space-y-4 animate-fade-in">
         <h2 className="text-2xl font-bold text-slate-700 text-center mb-6">Your Records</h2>
         {stats && ([1, 2, 3, 4, 5] as Level[]).map((lvl) => {
             const data = stats[lvl] || { win: 0, loss: 0, draw: 0 };
@@ -196,40 +196,42 @@ export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLev
   );
 
   return (
-    <div className="flex flex-col h-screen w-full relative">
+    <div className="flex flex-col h-[100dvh] w-full relative">
         <div className="flex-1 overflow-y-auto w-full">
-            <div className="flex flex-col items-center justify-center min-h-full p-4 w-full max-w-md mx-auto space-y-8 animate-fade-in relative z-10 pb-24">
+            <div className="min-h-full flex flex-col items-center p-4 w-full max-w-md mx-auto relative z-10 pb-32">
                 {/* Decorative Circles */}
                 <div className="absolute top-10 left-10 w-32 h-32 bg-yellow-300 rounded-full blur-3xl opacity-50 -z-10"></div>
                 <div className="absolute bottom-10 right-10 w-40 h-40 bg-orange-300 rounded-full blur-3xl opacity-50 -z-10"></div>
 
-                <div className="text-center space-y-4 animate-float mt-8">
-                    <div className="inline-block p-6 rounded-[2rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-b-8 border-slate-100 transform rotate-3">
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="w-10 h-10 rounded-full bg-slate-800 shadow-md"></div>
-                            <div className="w-10 h-10 rounded-full bg-white border-2 border-slate-200 shadow-md"></div>
-                            <div className="w-10 h-10 rounded-full bg-white border-2 border-slate-200 shadow-md"></div>
-                            <div className="w-10 h-10 rounded-full bg-slate-800 shadow-md"></div>
+                <div className="flex-1 w-full flex flex-col items-center justify-center space-y-8">
+                    <div className="text-center space-y-4 animate-float mt-4">
+                        <div className="inline-block p-6 rounded-[2rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-b-8 border-slate-100 transform rotate-3">
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="w-10 h-10 rounded-full bg-slate-800 shadow-md"></div>
+                                <div className="w-10 h-10 rounded-full bg-white border-2 border-slate-200 shadow-md"></div>
+                                <div className="w-10 h-10 rounded-full bg-white border-2 border-slate-200 shadow-md"></div>
+                                <div className="w-10 h-10 rounded-full bg-slate-800 shadow-md"></div>
+                            </div>
                         </div>
+                        <h1 className="text-7xl font-black text-slate-800 tracking-tight drop-shadow-sm">
+                            <span className="text-orange-500">R</span>
+                            <span className="text-yellow-500">e</span>
+                            <span className="text-green-500">v</span>
+                            <span className="text-sky-500">e</span>
+                            <span className="text-purple-500">r</span>
+                            <span className="text-pink-500">s</span>
+                            <span className="text-red-500">i</span>
+                        </h1>
+                        <p className="text-slate-500 font-bold text-lg">Can you beat the AI?</p>
                     </div>
-                    <h1 className="text-7xl font-black text-slate-800 tracking-tight drop-shadow-sm">
-                        <span className="text-orange-500">R</span>
-                        <span className="text-yellow-500">e</span>
-                        <span className="text-green-500">v</span>
-                        <span className="text-sky-500">e</span>
-                        <span className="text-purple-500">r</span>
-                        <span className="text-pink-500">s</span>
-                        <span className="text-red-500">i</span>
-                    </h1>
-                    <p className="text-slate-500 font-bold text-lg">Can you beat the AI?</p>
-                </div>
 
-                {activeTab === 'GAME' ? (
-                    <>
-                        {renderGameContent()}
-                        {renderOtherApps()}
-                    </>
-                ) : renderStatsContent()}
+                    {activeTab === 'GAME' ? (
+                        <>
+                            {renderGameContent()}
+                            {renderOtherApps()}
+                        </>
+                    ) : renderStatsContent()}
+                </div>
             </div>
         </div>
 
