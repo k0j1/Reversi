@@ -15,21 +15,29 @@ const App = () => {
 
   useEffect(() => {
     const load = async () => {
-      const context = await sdk.context;
-      if (context?.user) {
-        // Cast to any because the SDK types might not cover all properties yet
-        const u = context.user as any; 
-        setUser({
-          fid: context.user.fid,
-          username: context.user.username,
-          displayName: context.user.displayName,
-          pfpUrl: context.user.pfpUrl,
-          // Extract wallet info safely
-          custodyAddress: u.custodyAddress,
-          verifiedAddresses: u.verifiedAddresses as string[],
-        });
+      try {
+        const context = await sdk.context;
+        if (context?.user) {
+          // Cast to any because TS types might lag behind the actual SDK response in some environments
+          const u = context.user as any; 
+          
+          setUser({
+            fid: context.user.fid,
+            username: context.user.username,
+            displayName: context.user.displayName,
+            pfpUrl: context.user.pfpUrl,
+            // Extract wallet info safely.
+            // context.user.custodyAddress and context.user.verifiedAddresses should be available in newer SDKs
+            custodyAddress: u.custodyAddress, 
+            verifiedAddresses: u.verifiedAddresses,
+          });
+        }
+        sdk.actions.ready();
+      } catch (e) {
+        console.error("Error loading Farcaster context:", e);
+        // Fallback: indicate ready even if context fails
+        sdk.actions.ready();
       }
-      sdk.actions.ready();
     };
 
     if (sdk && !isSDKLoaded) {
