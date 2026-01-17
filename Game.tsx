@@ -6,11 +6,11 @@ import { ScoreBoard } from './components/ScoreBoard';
 import { Toast } from './components/Toast';
 
 const WIN_MULTIPLIERS: Record<Level, number> = {
-    1: 2,
-    2: 4,
-    3: 6,
-    4: 9,
-    5: 12
+    1: 1,
+    2: 2,
+    3: 3,
+    4: 5,
+    5: 10
 };
 
 export const Game = ({ level, onExit, user }: { level: Level, onExit: () => void, user?: FarcasterUser }) => {

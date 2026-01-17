@@ -3,11 +3,11 @@ import { useEffect, useRef } from 'react';
 import { AppStats, Level, LevelStats } from '../types';
 
 const WIN_MULTIPLIERS: Record<Level, number> = {
-    1: 2,
-    2: 4,
-    3: 6,
-    4: 9,
-    5: 12
+    1: 1,  // Beginner
+    2: 2,  // Easy
+    3: 3,  // Normal
+    4: 5,  // Hard
+    5: 10  // Expert
 };
 
 const INITIAL_LEVEL_STATS: LevelStats = { win: 0, loss: 0, draw: 0 };

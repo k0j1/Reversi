@@ -57,8 +57,21 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
 
   const connectWallet = useCallback(async () => {
     try {
-        // Cast to any to avoid TS error as types might not be updated for ethProvider yet
-        const result = await (sdk.actions as any).ethProvider.request({ method: 'eth_requestAccounts' });
+        // Safe access to SDK provider
+        const actions = sdk.actions as any;
+        const sdkProvider = actions?.ethProvider;
+        
+        // Safe access to Window provider (fallback for browser/testing)
+        const windowProvider = (window as any).ethereum;
+        
+        const provider = sdkProvider || windowProvider;
+
+        if (!provider) {
+             console.error("No wallet provider found. Please use Warpcast or a Web3 browser.");
+             return;
+        }
+
+        const result = await provider.request({ method: 'eth_requestAccounts' });
         if (result && Array.isArray(result) && result.length > 0) {
             setConnectedAddress(result[0]);
         }
@@ -67,9 +80,9 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
     }
   }, []);
 
+  // Auto-connect when profile is opened
   useEffect(() => {
     if (showProfile) {
-        // Try to get address if already connected
         connectWallet();
     }
   }, [showProfile, connectWallet]);
