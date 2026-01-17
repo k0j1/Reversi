@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Level, AppStats, LevelStats } from './types';
+import { Level, AppStats, LevelStats, FarcasterUser } from './types';
 
 const INITIAL_LEVEL_STATS: LevelStats = { win: 0, loss: 0, draw: 0 };
 const INITIAL_STATS: AppStats = {
@@ -15,7 +15,7 @@ const INITIAL_STATS: AppStats = {
     points: 0
 };
 
-export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLevel: (l: Level) => void, onStart: () => void }) => {
+export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, setLevel: (l: Level) => void, onStart: () => void, user?: FarcasterUser }) => {
   const [activeTab, setActiveTab] = useState<'GAME' | 'STATS'>('GAME');
   const [stats, setStats] = useState<AppStats | null>(null);
 
@@ -73,6 +73,23 @@ export const TitleScreen = ({ level, setLevel, onStart }: { level: Level, setLev
 
   const renderGameContent = () => (
     <div className="w-full bg-white p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] space-y-8 border-2 border-slate-100 animate-fade-in">
+        
+        {user && (
+            <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                {user.pfpUrl ? (
+                    <img src={user.pfpUrl} alt={user.username} className="w-10 h-10 rounded-full border border-slate-200" />
+                ) : (
+                    <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
+                        <span className="text-xl">👤</span>
+                    </div>
+                )}
+                <div className="flex flex-col">
+                    <span className="text-xs font-bold text-slate-400 uppercase">Welcome</span>
+                    <span className="text-sm font-bold text-slate-700">{user.displayName || user.username}</span>
+                </div>
+            </div>
+        )}
+
         <div className="space-y-4">
             <div className="flex justify-between items-center px-1">
                 <label className="text-xl font-bold text-slate-700">AI Strength</label>

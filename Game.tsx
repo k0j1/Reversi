@@ -1,5 +1,5 @@
 
-import { Level } from './types';
+import { Level, FarcasterUser } from './types';
 import { useGameLogic } from './hooks/useGameLogic';
 import { Board } from './components/Board';
 import { ScoreBoard } from './components/ScoreBoard';
@@ -9,7 +9,7 @@ const WIN_MULTIPLIERS: Record<Level, number> = {
     1: 2, 2: 4, 3: 6, 4: 9, 5: 12
 };
 
-export const Game = ({ level, onExit }: { level: Level, onExit: () => void }) => {
+export const Game = ({ level, onExit, user }: { level: Level, onExit: () => void, user?: FarcasterUser }) => {
   const {
     board,
     turn,
@@ -36,7 +36,8 @@ export const Game = ({ level, onExit }: { level: Level, onExit: () => void }) =>
             scores={scores} 
             turn={turn} 
             gameOver={gameOver} 
-            level={level} 
+            level={level}
+            user={user}
         />
 
         <div className="relative w-full">

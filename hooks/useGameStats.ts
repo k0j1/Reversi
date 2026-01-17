@@ -59,7 +59,6 @@ export const useGameStats = (gameOver: boolean, level: Level, scores: { black: n
 
                 const isWin = scores.black > scores.white;
                 const isLoss = scores.black < scores.white;
-                const isDraw = scores.black === scores.white;
 
                 // Update Level Stats
                 if (isWin) stats.levels[level].win += 1;

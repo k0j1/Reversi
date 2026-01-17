@@ -18,3 +18,10 @@ export type AppStats = {
     total: LevelStats;
     points: number;
 };
+
+export type FarcasterUser = {
+    fid: number;
+    username?: string;
+    displayName?: string;
+    pfpUrl?: string;
+};
