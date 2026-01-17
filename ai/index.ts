@@ -1,45 +1,31 @@
 
 import { Board, Cell, Level } from '../types';
-import { getValidMoves } from '../gameLogic';
 import { searchBestMove } from './minimax';
-
-// Level 1: Random (Beginner)
-const getLevel1Move = (board: Board, player: Cell): { r: number, c: number } | null => {
-  const moves = getValidMoves(board, player);
-  if (moves.length === 0) return null;
-  return moves[Math.floor(Math.random() * moves.length)];
-};
-
-// Level 2: Depth 1 (Greedy / Novice)
-const getLevel2Move = (board: Board, player: Cell): { r: number, c: number } | null => {
-  return searchBestMove(board, player, 1);
-};
-
-// Level 3: Depth 2 (Normal)
-const getLevel3Move = (board: Board, player: Cell): { r: number, c: number } | null => {
-  return searchBestMove(board, player, 2);
-};
-
-// Level 4: Depth 4 (Strong)
-const getLevel4Move = (board: Board, player: Cell): { r: number, c: number } | null => {
-  return searchBestMove(board, player, 4);
-};
-
-// Level 5: Depth 6 (Master)
-const getLevel5Move = (board: Board, player: Cell): { r: number, c: number } | null => {
-  return searchBestMove(board, player, 6);
-};
+import { getValidMoves } from '../gameLogic';
 
 /**
  * Returns the best move for the AI based on the selected difficulty level.
  */
 export const getBestMove = (board: Board, player: Cell, level: Level): { r: number, c: number } | null => {
+  // Level 1: Depth 1 (Fastest/Weakest)
+  // Level 2: Depth 2
+  // Level 3: Depth 3 (Normal)
+  // Level 4: Depth 4
+  // Level 5: Depth 5 (Strongest)
+  
+  let depth = 1;
   switch (level) {
-    case 1: return getLevel1Move(board, player);
-    case 2: return getLevel2Move(board, player);
-    case 3: return getLevel3Move(board, player);
-    case 4: return getLevel4Move(board, player);
-    case 5: return getLevel5Move(board, player);
-    default: return getLevel3Move(board, player);
+      case 1: depth = 1; break;
+      case 2: depth = 2; break;
+      case 3: depth = 3; break;
+      case 4: depth = 4; break;
+      case 5: depth = 5; break;
+      default: depth = 3;
   }
+  
+  // If Level 1 is too strong with depth 1 minimax (which uses positional weights), 
+  // we could introduce randomness or use a simpler evaluator. 
+  // For now, depth 1 is a good "Easy" baseline that doesn't make completely random/stupid moves.
+  
+  return searchBestMove(board, player, depth);
 };

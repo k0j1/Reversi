@@ -18,6 +18,7 @@ const INITIAL_STATS: AppStats = {
 export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, setLevel: (l: Level) => void, onStart: () => void, user?: FarcasterUser }) => {
   const [activeTab, setActiveTab] = useState<'GAME' | 'STATS'>('GAME');
   const [stats, setStats] = useState<AppStats | null>(null);
+  const [showProfile, setShowProfile] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'STATS') {
@@ -26,17 +27,20 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
             if (data) {
                 const parsed = JSON.parse(data);
                 let loadedStats: AppStats = JSON.parse(JSON.stringify(INITIAL_STATS));
-
-                // Migration logic for display
-                if (!parsed.levels && parsed[1]) {
-                     loadedStats.levels = { ...loadedStats.levels, ...parsed };
-                     Object.values(loadedStats.levels).forEach((lvlStats: any) => {
+                
+                if (parsed.levels) {
+                    // Load intersecting levels
+                    ([1, 2, 3, 4, 5] as Level[]).forEach(l => {
+                        if (parsed.levels[l]) loadedStats.levels[l] = parsed.levels[l];
+                    });
+                    // Recalculate total
+                    loadedStats.total = { win: 0, loss: 0, draw: 0 };
+                    Object.values(loadedStats.levels).forEach((lvlStats: any) => {
                         loadedStats.total.win += lvlStats.win || 0;
                         loadedStats.total.loss += lvlStats.loss || 0;
                         loadedStats.total.draw += lvlStats.draw || 0;
                     });
-                } else {
-                    loadedStats = { ...INITIAL_STATS, ...parsed };
+                    loadedStats.points = parsed.points || 0;
                 }
                 setStats(loadedStats);
             } else {
@@ -52,10 +56,10 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
   const getLevelLabel = (l: number) => {
       switch(l) {
           case 1: return 'Beginner';
-          case 2: return 'Novice';
+          case 2: return 'Easy';
           case 3: return 'Normal';
-          case 4: return 'Strong';
-          case 5: return 'Master';
+          case 4: return 'Hard';
+          case 5: return 'Expert';
           default: return 'Normal';
       }
   };
@@ -63,7 +67,7 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
   const getLevelColor = (l: number) => {
       switch(l) {
           case 1: return 'bg-green-100 text-green-600 border-green-200';
-          case 2: return 'bg-sky-100 text-sky-600 border-sky-200';
+          case 2: return 'bg-teal-100 text-teal-600 border-teal-200';
           case 3: return 'bg-yellow-100 text-yellow-600 border-yellow-200';
           case 4: return 'bg-orange-100 text-orange-600 border-orange-200';
           case 5: return 'bg-red-100 text-red-600 border-red-200';
@@ -71,30 +75,106 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
       }
   };
 
+  const renderProfileButton = () => {
+    if (!user) return null;
+    return (
+      <button
+        onClick={() => setShowProfile(true)}
+        className="absolute top-4 right-4 z-50 flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 pr-3 rounded-full shadow-sm border border-slate-200 hover:bg-white transition-all active:scale-95"
+      >
+        {user.pfpUrl ? (
+            <img src={user.pfpUrl} alt={user.username} className="w-8 h-8 rounded-full border border-slate-200" />
+        ) : (
+            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
+                <span className="text-sm">👤</span>
+            </div>
+        )}
+        <span className="text-xs font-bold text-slate-700 max-w-[80px] truncate">
+            {user.displayName || user.username}
+        </span>
+      </button>
+    );
+  };
+
+  const renderProfileModal = () => {
+    if (!showProfile || !user) return null;
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowProfile(false)}></div>
+            <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative z-10 flex flex-col gap-6 animate-bounce-in max-h-[85vh] overflow-y-auto border-4 border-slate-100">
+                <button
+                    onClick={() => setShowProfile(false)}
+                    className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full transition-colors"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                </button>
+                
+                {/* User Info Header */}
+                <div className="flex flex-col items-center gap-2 pt-2">
+                    {user.pfpUrl ? (
+                        <img src={user.pfpUrl} alt={user.username} className="w-24 h-24 rounded-full border-4 border-white shadow-lg bg-slate-100 object-cover" />
+                    ) : (
+                        <div className="w-24 h-24 rounded-full border-4 border-white shadow-lg bg-slate-200 flex items-center justify-center text-4xl">👤</div>
+                    )}
+                    <div className="text-center">
+                        <h3 className="text-xl font-black text-slate-800">{user.displayName}</h3>
+                        <p className="text-slate-500 font-bold">@{user.username}</p>
+                        <span className="inline-block mt-2 px-3 py-1 bg-slate-100 text-slate-500 text-xs font-bold rounded-full border border-slate-200">FID: {user.fid}</span>
+                    </div>
+                </div>
+
+                {/* Wallets Section */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 000-2z" clipRule="evenodd" />
+                        </svg>
+                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-wider">Wallet Information</h4>
+                    </div>
+                    
+                    {/* Custody Address */}
+                    <div className="space-y-1">
+                        <span className="text-xs font-bold text-slate-500 pl-1">Custody Address</span>
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 break-all text-xs font-mono text-slate-600 select-all hover:bg-slate-100 transition-colors">
+                            {user.custodyAddress || "Not available"}
+                        </div>
+                    </div>
+
+                    {/* Verified Addresses */}
+                     <div className="space-y-1">
+                        <span className="text-xs font-bold text-slate-500 pl-1">Verified Addresses</span>
+                        {user.verifiedAddresses && user.verifiedAddresses.length > 0 ? (
+                            <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
+                                {user.verifiedAddresses.map((addr, i) => (
+                                    <div key={i} className="bg-slate-50 p-3 rounded-xl border border-slate-100 break-all text-xs font-mono text-slate-600 select-all hover:bg-slate-100 transition-colors">
+                                        {addr}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-xs text-slate-400 italic pl-1">No verified addresses linked.</div>
+                        )}
+                    </div>
+                </div>
+                
+                <div className="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-auto">
+                    Connected via Farcaster
+                </div>
+            </div>
+        </div>
+    );
+  };
+
   const renderGameContent = () => (
     <div className="w-full bg-white p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] space-y-8 border-2 border-slate-100 animate-fade-in">
         
-        {user && (
-            <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                {user.pfpUrl ? (
-                    <img src={user.pfpUrl} alt={user.username} className="w-10 h-10 rounded-full border border-slate-200" />
-                ) : (
-                    <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
-                        <span className="text-xl">👤</span>
-                    </div>
-                )}
-                <div className="flex flex-col">
-                    <span className="text-xs font-bold text-slate-400 uppercase">Welcome</span>
-                    <span className="text-sm font-bold text-slate-700">{user.displayName || user.username}</span>
-                </div>
-            </div>
-        )}
-
         <div className="space-y-4">
             <div className="flex justify-between items-center px-1">
                 <label className="text-xl font-bold text-slate-700">AI Strength</label>
                 <span className={`text-lg font-bold px-4 py-1 rounded-full border-2 ${getLevelColor(level)}`}>
-                    Lv.{level} {getLevelLabel(level)}
+                    {getLevelLabel(level)}
                 </span>
             </div>
             
@@ -116,11 +196,11 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
                     }}
                 />
                 <div className="flex justify-between text-xs text-slate-400 font-bold mt-3 px-1">
-                    <span>Lv.1</span>
-                    <span>Lv.2</span>
-                    <span>Lv.3</span>
-                    <span>Lv.4</span>
-                    <span>Lv.5</span>
+                    <span>1</span>
+                    <span>2</span>
+                    <span>3</span>
+                    <span>4</span>
+                    <span>5</span>
                 </div>
             </div>
         </div>
@@ -195,7 +275,7 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
                     let colorClass = '';
                     switch(lvl) {
                         case 1: colorClass = 'text-green-500 bg-green-50 border-green-200'; break;
-                        case 2: colorClass = 'text-sky-500 bg-sky-50 border-sky-200'; break;
+                        case 2: colorClass = 'text-teal-500 bg-teal-50 border-teal-200'; break;
                         case 3: colorClass = 'text-yellow-500 bg-yellow-50 border-yellow-200'; break;
                         case 4: colorClass = 'text-orange-500 bg-orange-50 border-orange-200'; break;
                         case 5: colorClass = 'text-red-500 bg-red-50 border-red-200'; break;
@@ -205,7 +285,7 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
                         <div key={lvl} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-3">
                             <div className="flex justify-between items-center">
                                 <span className={`font-bold px-3 py-1 rounded-full text-sm border ${colorClass}`}>
-                                    Lv.{lvl} {getLevelLabel(lvl)}
+                                    {getLevelLabel(lvl)}
                                 </span>
                                 <span className="text-slate-400 text-xs font-bold">Matches: {total}</span>
                             </div>
@@ -253,6 +333,12 @@ export const TitleScreen = ({ level, setLevel, onStart, user }: { level: Level, 
 
   return (
     <div className="flex flex-col h-[100dvh] w-full relative">
+        {/* Profile Button - Only visible if user is logged in */}
+        {renderProfileButton()}
+        
+        {/* Modals */}
+        {renderProfileModal()}
+
         <div className="flex-1 overflow-y-auto w-full">
             <div className="min-h-full flex flex-col items-center p-4 w-full max-w-md mx-auto relative z-10 pb-32">
                 {/* Decorative Circles */}

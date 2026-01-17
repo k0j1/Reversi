@@ -37,24 +37,23 @@ export const useGameStats = (gameOver: boolean, level: Level, scores: { black: n
 
                 if (stored) {
                     const parsed = JSON.parse(stored);
-                    // Check if it's the old format (Record<Level, LevelStats>) or new format
-                    if (!parsed.levels && parsed[1]) {
-                        // Migrate old data
-                        stats.levels = { ...stats.levels, ...parsed };
-                        // Calculate total from levels
-                        Object.values(stats.levels).forEach((lvlStats: any) => {
-                            stats.total.win += lvlStats.win || 0;
-                            stats.total.loss += lvlStats.loss || 0;
-                            stats.total.draw += lvlStats.draw || 0;
-                        });
-                    } else {
-                        // New format
-                        stats = { ...INITIAL_STATS, ...parsed };
-                        // Ensure all levels exist (in case of partial data)
-                        ([1, 2, 3, 4, 5] as Level[]).forEach(l => {
-                            if (!stats.levels[l]) stats.levels[l] = { ...INITIAL_LEVEL_STATS };
-                        });
-                    }
+                    
+                    // Restore Total Points
+                    stats.points = parsed.points || 0;
+                    
+                    // Restore level stats that exist in current version
+                    ([1, 2, 3, 4, 5] as Level[]).forEach(l => {
+                        if (parsed.levels && parsed.levels[l]) {
+                            stats.levels[l] = parsed.levels[l];
+                        }
+                    });
+
+                    // Re-calculate totals based on active levels only
+                    Object.values(stats.levels).forEach((lvlStats: any) => {
+                        stats.total.win += lvlStats.win || 0;
+                        stats.total.loss += lvlStats.loss || 0;
+                        stats.total.draw += lvlStats.draw || 0;
+                    });
                 }
 
                 const isWin = scores.black > scores.white;

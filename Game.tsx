@@ -6,7 +6,11 @@ import { ScoreBoard } from './components/ScoreBoard';
 import { Toast } from './components/Toast';
 
 const WIN_MULTIPLIERS: Record<Level, number> = {
-    1: 2, 2: 4, 3: 6, 4: 9, 5: 12
+    1: 2,
+    2: 4,
+    3: 6,
+    4: 9,
+    5: 12
 };
 
 export const Game = ({ level, onExit, user }: { level: Level, onExit: () => void, user?: FarcasterUser }) => {
@@ -27,6 +31,17 @@ export const Game = ({ level, onExit, user }: { level: Level, onExit: () => void
   const isDraw = scores.black === scores.white;
   const multiplier = isWin ? WIN_MULTIPLIERS[level] : 1;
   const points = scores.black * multiplier;
+
+  const getLevelLabel = (l: number) => {
+    switch(l) {
+        case 1: return 'Beginner';
+        case 2: return 'Easy';
+        case 3: return 'Normal';
+        case 4: return 'Hard';
+        case 5: return 'Expert';
+        default: return 'Normal';
+    }
+  };
 
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-6 p-2 sm:p-4 w-full max-w-2xl animate-fade-in relative">
@@ -70,7 +85,7 @@ export const Game = ({ level, onExit, user }: { level: Level, onExit: () => void
                                 <span className="text-xl">{scores.black}</span>
                             </div>
                             <div className="flex justify-between items-center text-slate-400 font-bold text-sm">
-                                <span>Multiplier (Lv.{level})</span>
+                                <span>Multiplier ({getLevelLabel(level)})</span>
                                 <span>× {multiplier}</span>
                             </div>
                             <div className="h-px bg-slate-200 w-full"></div>

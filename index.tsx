@@ -8,7 +8,8 @@ import { Level, FarcasterUser } from './types';
 
 const App = () => {
   const [view, setView] = useState<'TITLE' | 'GAME'>('TITLE');
-  const [level, setLevel] = useState<Level>(5);
+  // Default to Normal (2)
+  const [level, setLevel] = useState<Level>(2);
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
   const [user, setUser] = useState<FarcasterUser | undefined>();
 
@@ -21,6 +22,9 @@ const App = () => {
           username: context.user.username,
           displayName: context.user.displayName,
           pfpUrl: context.user.pfpUrl,
+          // Extract wallet info
+          custodyAddress: context.user.custodyAddress,
+          verifiedAddresses: context.user.verifiedAddresses as string[],
         });
       }
       sdk.actions.ready();
