@@ -49,6 +49,9 @@ export const useGameStats = (
                         
                         if (data?.stats) {
                             stats = data.stats;
+                        } else if (error && error.code !== 'PGRST116') {
+                            // Log error if it's something other than "row not found"
+                            console.error("Error loading stats:", error);
                         }
                     } else {
                         const stored = localStorage.getItem('reversi_pop_stats');
