@@ -1,6 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { Level, AppStats, LevelStats, FarcasterUser } from './types';
+import { supabase } from './lib/supabase';
 
 const INITIAL_LEVEL_STATS: LevelStats = { win: 0, loss: 0, draw: 0 };
 const INITIAL_STATS: AppStats = {
@@ -31,36 +31,60 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
 
   useEffect(() => {
     if (activeTab === 'STATS') {
-        try {
-            const data = localStorage.getItem('reversi_pop_stats');
-            if (data) {
-                const parsed = JSON.parse(data);
+        const loadStats = async () => {
+            try {
                 let loadedStats: AppStats = JSON.parse(JSON.stringify(INITIAL_STATS));
-                
-                if (parsed.levels) {
-                    // Load intersecting levels
-                    ([1, 2, 3, 4, 5] as Level[]).forEach(l => {
-                        if (parsed.levels[l]) loadedStats.levels[l] = parsed.levels[l];
-                    });
-                    // Recalculate total
-                    loadedStats.total = { win: 0, loss: 0, draw: 0 };
-                    Object.values(loadedStats.levels).forEach((lvlStats: any) => {
-                        loadedStats.total.win += lvlStats.win || 0;
-                        loadedStats.total.loss += lvlStats.loss || 0;
-                        loadedStats.total.draw += lvlStats.draw || 0;
-                    });
-                    loadedStats.points = parsed.points || 0;
+                let found = false;
+
+                if (user) {
+                    // Fetch from Supabase
+                    const { data, error } = await supabase
+                        .from('reversi_game_stats')
+                        .select('stats')
+                        .eq('fid', user.fid)
+                        .single();
+                    
+                    if (data?.stats) {
+                        loadedStats = data.stats;
+                        found = true;
+                    } else if (error && error.code !== 'PGRST116') {
+                        console.error("Supabase fetch error:", error);
+                    }
                 }
+                
+                if (!found) {
+                    // Fallback to local storage if no user or no data found
+                    const data = localStorage.getItem('reversi_pop_stats');
+                    if (data) {
+                        const parsed = JSON.parse(data);
+                        if (parsed.levels) {
+                            // Load intersecting levels
+                            ([1, 2, 3, 4, 5] as Level[]).forEach(l => {
+                                if (parsed.levels[l]) loadedStats.levels[l] = parsed.levels[l];
+                            });
+                            // Recalculate total
+                            loadedStats.total = { win: 0, loss: 0, draw: 0 };
+                            Object.values(loadedStats.levels).forEach((lvlStats: any) => {
+                                loadedStats.total.win += lvlStats.win || 0;
+                                loadedStats.total.loss += lvlStats.loss || 0;
+                                loadedStats.total.draw += lvlStats.draw || 0;
+                            });
+                            loadedStats.points = parsed.points || 0;
+                        }
+                    }
+                }
+                
                 setStats(loadedStats);
-            } else {
+
+            } catch (e) {
+                console.error("Failed to load stats", e);
                 setStats(INITIAL_STATS);
             }
-        } catch (e) {
-            console.error("Failed to load stats", e);
-            setStats(INITIAL_STATS);
-        }
+        };
+
+        loadStats();
     }
-  }, [activeTab]);
+  }, [activeTab, user]);
 
   // Auto-connect when profile is opened
   useEffect(() => {
@@ -89,6 +113,29 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
           case 5: return 'bg-red-100 text-red-600 border-red-200';
           default: return 'bg-slate-100 text-slate-600 border-slate-200';
       }
+  };
+
+  const handleReset = async () => {
+    if(confirm("Are you sure you want to reset all records and points?")) {
+        try {
+            if (user) {
+                // Reset in Supabase
+                await supabase.from('reversi_game_stats')
+                    .update({ 
+                        stats: INITIAL_STATS,
+                        points: 0 
+                    })
+                    .eq('fid', user.fid);
+            }
+            
+            // Also reset local storage to be safe
+            localStorage.removeItem('reversi_pop_stats');
+            setStats(JSON.parse(JSON.stringify(INITIAL_STATS)));
+            
+        } catch (e) {
+            console.error("Failed to reset stats", e);
+        }
+    }
   };
 
   const renderProfileButton = () => {
@@ -353,12 +400,7 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
         )}
         
         <button 
-            onClick={() => {
-                if(confirm("Are you sure you want to reset all records and points?")) {
-                    localStorage.removeItem('reversi_pop_stats');
-                    setStats(INITIAL_STATS);
-                }
-            }}
+            onClick={handleReset}
             className="w-full mt-4 py-2 text-slate-400 text-sm font-bold hover:text-red-500 transition-colors"
         >
             Reset Records

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { AppStats, Level, LevelStats } from '../types';
+import { AppStats, Level, LevelStats, FarcasterUser } from '../types';
+import { supabase } from '../lib/supabase';
 
 const WIN_MULTIPLIERS: Record<Level, number> = {
     1: 2,  // Beginner
@@ -22,73 +23,109 @@ const INITIAL_STATS: AppStats = {
     points: 0
 };
 
-export const useGameStats = (gameOver: boolean, level: Level, scores: { black: number, white: number }) => {
+export const useGameStats = (
+    gameOver: boolean, 
+    level: Level, 
+    scores: { black: number, white: number }, 
+    user?: FarcasterUser
+) => {
     const savedRef = useRef(false);
 
     useEffect(() => {
         if (gameOver && !savedRef.current) {
             savedRef.current = true;
-            try {
-                const storageKey = 'reversi_pop_stats';
-                const stored = localStorage.getItem(storageKey);
-                
-                let stats: AppStats = JSON.parse(JSON.stringify(INITIAL_STATS));
-
-                if (stored) {
-                    const parsed = JSON.parse(stored);
+            
+            const saveStats = async () => {
+                try {
+                    let stats: AppStats = JSON.parse(JSON.stringify(INITIAL_STATS));
                     
-                    // Restore Total Points
-                    stats.points = parsed.points || 0;
-                    
-                    // Restore level stats that exist in current version
-                    ([1, 2, 3, 4, 5] as Level[]).forEach(l => {
-                        if (parsed.levels && parsed.levels[l]) {
-                            stats.levels[l] = parsed.levels[l];
+                    // 1. Load current stats
+                    if (user) {
+                        const { data, error } = await supabase
+                            .from('reversi_game_stats')
+                            .select('stats')
+                            .eq('fid', user.fid)
+                            .single();
+                        
+                        if (data?.stats) {
+                            stats = data.stats;
                         }
-                    });
+                    } else {
+                        const stored = localStorage.getItem('reversi_pop_stats');
+                        if (stored) {
+                            const parsed = JSON.parse(stored);
+                            // Merge logic for local storage backward compatibility
+                            stats.points = parsed.points || 0;
+                            ([1, 2, 3, 4, 5] as Level[]).forEach(l => {
+                                if (parsed.levels && parsed.levels[l]) {
+                                    stats.levels[l] = parsed.levels[l];
+                                }
+                            });
+                            // Re-calc totals
+                            stats.total = { win: 0, loss: 0, draw: 0 };
+                            Object.values(stats.levels).forEach((lvlStats: any) => {
+                                stats.total.win += lvlStats.win || 0;
+                                stats.total.loss += lvlStats.loss || 0;
+                                stats.total.draw += lvlStats.draw || 0;
+                            });
+                        }
+                    }
 
-                    // Re-calculate totals based on active levels only
-                    Object.values(stats.levels).forEach((lvlStats: any) => {
-                        stats.total.win += lvlStats.win || 0;
-                        stats.total.loss += lvlStats.loss || 0;
-                        stats.total.draw += lvlStats.draw || 0;
-                    });
+                    // 2. Calculate new stats
+                    const isWin = scores.black > scores.white;
+                    const isLoss = scores.black < scores.white;
+
+                    // Update Level Stats
+                    if (isWin) stats.levels[level].win += 1;
+                    else if (isLoss) stats.levels[level].loss += 1;
+                    else stats.levels[level].draw += 1;
+
+                    // Update Total Stats
+                    if (isWin) stats.total.win += 1;
+                    else if (isLoss) stats.total.loss += 1;
+                    else stats.total.draw += 1;
+
+                    // Calculate Points
+                    let pointsEarned = 0;
+                    const discCount = scores.black;
+
+                    if (isWin) {
+                        pointsEarned = discCount * WIN_MULTIPLIERS[level];
+                    } else {
+                        pointsEarned = discCount * 1;
+                    }
+
+                    stats.points += pointsEarned;
+                    
+                    // 3. Save stats
+                    if (user) {
+                        const { error } = await supabase
+                            .from('reversi_game_stats')
+                            .upsert({
+                                fid: user.fid,
+                                username: user.username,
+                                display_name: user.displayName,
+                                pfp_url: user.pfpUrl,
+                                stats: stats,
+                                points: stats.points
+                            });
+                        
+                        if (error) console.error("Supabase upsert error:", error);
+                        else console.log(`Game Saved (Supabase): Earned ${pointsEarned} pts. Total: ${stats.points}`);
+                    } else {
+                        localStorage.setItem('reversi_pop_stats', JSON.stringify(stats));
+                        console.log(`Game Saved (Local): Earned ${pointsEarned} pts. Total: ${stats.points}`);
+                    }
+
+                } catch (e) {
+                    console.error("Failed to save stats", e);
                 }
+            };
 
-                const isWin = scores.black > scores.white;
-                const isLoss = scores.black < scores.white;
+            saveStats();
 
-                // Update Level Stats
-                if (isWin) stats.levels[level].win += 1;
-                else if (isLoss) stats.levels[level].loss += 1;
-                else stats.levels[level].draw += 1;
-
-                // Update Total Stats
-                if (isWin) stats.total.win += 1;
-                else if (isLoss) stats.total.loss += 1;
-                else stats.total.draw += 1;
-
-                // Calculate Points
-                let pointsEarned = 0;
-                const discCount = scores.black; // Player's discs
-
-                if (isWin) {
-                    pointsEarned = discCount * WIN_MULTIPLIERS[level];
-                } else {
-                    // Loss or Draw: 1x multiplier
-                    pointsEarned = discCount * 1;
-                }
-
-                stats.points += pointsEarned;
-                
-                localStorage.setItem(storageKey, JSON.stringify(stats));
-                console.log(`Game Saved: Earned ${pointsEarned} pts. Total: ${stats.points}`);
-
-            } catch (e) {
-                console.error("Failed to save stats", e);
-            }
         } else if (!gameOver) {
             savedRef.current = false;
         }
-    }, [gameOver, level, scores]);
+    }, [gameOver, level, scores, user]);
 };

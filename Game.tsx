@@ -23,7 +23,7 @@ export const Game = ({ level, onExit, user }: { level: Level, onExit: () => void
     lastMove,
     toast,
     handleCellClick
-  } = useGameLogic(level);
+  } = useGameLogic(level, user);
 
   // Calculate result details for display
   const isWin = scores.black > scores.white;
