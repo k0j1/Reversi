@@ -42,7 +42,7 @@ export const useGameStats = (
                     
                     // 1. Load current stats
                     if (user) {
-                        const { data, error } = await supabase
+                        const { data } = await supabase
                             .from('reversi_game_stats')
                             .select('stats')
                             .eq('fid', user.fid)
