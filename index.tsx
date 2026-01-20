@@ -5,7 +5,7 @@ import { TitleScreen } from './TitleScreen';
 import { Level } from './types';
 import { useFarcaster } from './hooks/useFarcaster';
 import { useUserSync } from './hooks/useUserSync';
-import './index.css';
+import './styles.css';
 
 const App = () => {
   const [view, setView] = useState<'TITLE' | 'GAME'>('TITLE');
