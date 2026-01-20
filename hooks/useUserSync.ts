@@ -1,0 +1,75 @@
+import { useEffect } from 'react';
+import { FarcasterUser } from '../types';
+import { supabase } from '../lib/supabase';
+
+const INITIAL_LEVEL_STATS = { win: 0, loss: 0, draw: 0 };
+const INITIAL_STATS = {
+    levels: {
+        1: { ...INITIAL_LEVEL_STATS },
+        2: { ...INITIAL_LEVEL_STATS },
+        3: { ...INITIAL_LEVEL_STATS },
+        4: { ...INITIAL_LEVEL_STATS },
+        5: { ...INITIAL_LEVEL_STATS },
+    },
+    total: { ...INITIAL_LEVEL_STATS },
+    points: 0
+};
+
+export const useUserSync = (user: FarcasterUser | undefined, connectedAddress: string | null) => {
+    useEffect(() => {
+        if (!user) return;
+
+        const syncUser = async () => {
+            try {
+                // Check if user exists to decide between update (profile only) or insert (init stats)
+                const { data: existing, error } = await supabase
+                    .from('reversi_game_stats')
+                    .select('fid')
+                    .eq('fid', user.fid)
+                    .single();
+
+                if (error && error.code !== 'PGRST116') {
+                    console.error("Error checking user existence:", error);
+                    return;
+                }
+
+                const profileData = {
+                    fid: user.fid,
+                    username: user.username,
+                    display_name: user.displayName,
+                    pfp_url: user.pfpUrl,
+                    custody_address: user.custodyAddress,
+                    verified_addresses: user.verifiedAddresses,
+                    connected_address: connectedAddress
+                };
+
+                if (existing) {
+                    // User exists: Update profile info only to preserve stats/points
+                    const { error: updateError } = await supabase
+                        .from('reversi_game_stats')
+                        .update(profileData)
+                        .eq('fid', user.fid);
+                    
+                    if (updateError) console.error("Failed to update user profile:", updateError);
+                    else console.log("User profile synced to Supabase");
+                } else {
+                    // New user: Insert with initial stats
+                    const { error: insertError } = await supabase
+                        .from('reversi_game_stats')
+                        .insert({
+                            ...profileData,
+                            stats: INITIAL_STATS,
+                            points: 0
+                        });
+
+                    if (insertError) console.error("Failed to create new user record:", insertError);
+                    else console.log("New user record created in Supabase");
+                }
+            } catch (e) {
+                console.error("Unexpected error syncing user:", e);
+            }
+        };
+
+        syncUser();
+    }, [user, connectedAddress]);
+};

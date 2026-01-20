@@ -27,7 +27,8 @@ export const useGameStats = (
     gameOver: boolean, 
     level: Level, 
     scores: { black: number, white: number }, 
-    user?: FarcasterUser
+    user?: FarcasterUser,
+    connectedAddress: string | null = null
 ) => {
     const savedRef = useRef(false);
 
@@ -49,9 +50,6 @@ export const useGameStats = (
                         
                         if (data?.stats) {
                             stats = data.stats;
-                        } else if (error && error.code !== 'PGRST116') {
-                            // Log error if it's something other than "row not found"
-                            console.error("Error loading stats:", error);
                         }
                     } else {
                         const stored = localStorage.getItem('reversi_pop_stats');
@@ -102,6 +100,7 @@ export const useGameStats = (
                     
                     // 3. Save stats
                     if (user) {
+                        // Always update profile info along with stats
                         const { error } = await supabase
                             .from('reversi_game_stats')
                             .upsert({
@@ -109,6 +108,9 @@ export const useGameStats = (
                                 username: user.username,
                                 display_name: user.displayName,
                                 pfp_url: user.pfpUrl,
+                                custody_address: user.custodyAddress,
+                                verified_addresses: user.verifiedAddresses,
+                                connected_address: connectedAddress,
                                 stats: stats,
                                 points: stats.points
                             });
@@ -130,5 +132,5 @@ export const useGameStats = (
         } else if (!gameOver) {
             savedRef.current = false;
         }
-    }, [gameOver, level, scores, user]);
+    }, [gameOver, level, scores, user, connectedAddress]);
 };

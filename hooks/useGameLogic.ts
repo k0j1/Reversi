@@ -4,7 +4,7 @@ import { createInitialBoard, getValidMoves, applyMove, countDiscs } from '../gam
 import { getBestMove } from '../ai';
 import { useGameStats } from './useGameStats';
 
-export const useGameLogic = (level: Level, user?: FarcasterUser) => {
+export const useGameLogic = (level: Level, user?: FarcasterUser, connectedAddress: string | null = null) => {
   const [board, setBoard] = useState<Board>(createInitialBoard());
   const [turn, setTurn] = useState<Cell>(BLACK); 
   const [gameOver, setGameOver] = useState(false);
@@ -15,7 +15,7 @@ export const useGameLogic = (level: Level, user?: FarcasterUser) => {
   const [toast, setToast] = useState<{msg: string, type: 'info' | 'warn'} | null>(null);
 
   // Stats Hook Integration
-  useGameStats(gameOver, level, scores, user);
+  useGameStats(gameOver, level, scores, user, connectedAddress);
 
   useEffect(() => {
     const moves = getValidMoves(board, turn);
