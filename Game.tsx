@@ -3,14 +3,7 @@ import { useGameLogic } from './hooks/useGameLogic';
 import { Board } from './components/Board';
 import { ScoreBoard } from './components/ScoreBoard';
 import { Toast } from './components/Toast';
-
-const WIN_MULTIPLIERS: Record<Level, number> = {
-    1: 2,
-    2: 4,
-    3: 6,
-    4: 9,
-    5: 12
-};
+import { WIN_MULTIPLIERS } from './constants';
 
 type GameProps = {
     level: Level;

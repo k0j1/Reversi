@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Level, Cell, Board, BLACK, WHITE, FarcasterUser } from '../types';
 import { createInitialBoard, getValidMoves, applyMove, countDiscs } from '../gameLogic';
 import { getBestMove } from '../ai';
@@ -14,8 +14,13 @@ export const useGameLogic = (level: Level, user?: FarcasterUser, connectedAddres
   const [lastMove, setLastMove] = useState<{r: number, c: number} | null>(null);
   const [toast, setToast] = useState<{msg: string, type: 'info' | 'warn'} | null>(null);
 
+  const handleShowToast = useCallback((msg: string, type: 'info' | 'warn') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
+
   // Stats Hook Integration
-  useGameStats(gameOver, level, scores, user, connectedAddress);
+  useGameStats(gameOver, level, scores, handleShowToast, user, connectedAddress);
 
   useEffect(() => {
     const moves = getValidMoves(board, turn);

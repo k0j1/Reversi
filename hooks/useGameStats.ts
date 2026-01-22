@@ -1,32 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { AppStats, Level, LevelStats, FarcasterUser } from '../types';
+import { AppStats, Level, FarcasterUser } from '../types';
 import { supabase } from '../lib/supabase';
-
-const WIN_MULTIPLIERS: Record<Level, number> = {
-    1: 2,  // Beginner
-    2: 4,  // Easy
-    3: 6,  // Normal
-    4: 9,  // Hard
-    5: 12  // Expert
-};
-
-const INITIAL_LEVEL_STATS: LevelStats = { win: 0, loss: 0, draw: 0 };
-const INITIAL_STATS: AppStats = {
-    levels: {
-        1: { ...INITIAL_LEVEL_STATS },
-        2: { ...INITIAL_LEVEL_STATS },
-        3: { ...INITIAL_LEVEL_STATS },
-        4: { ...INITIAL_LEVEL_STATS },
-        5: { ...INITIAL_LEVEL_STATS },
-    },
-    total: { ...INITIAL_LEVEL_STATS },
-    points: 0
-};
+import { INITIAL_STATS, WIN_MULTIPLIERS } from '../constants';
 
 export const useGameStats = (
     gameOver: boolean, 
     level: Level, 
     scores: { black: number, white: number }, 
+    onShowToast: (msg: string, type: 'info' | 'warn') => void,
     user?: FarcasterUser,
     connectedAddress: string | null = null
 ) => {
@@ -115,15 +96,22 @@ export const useGameStats = (
                                 points: stats.points
                             });
                         
-                        if (error) console.error("Supabase upsert error:", error);
-                        else console.log(`Game Saved (Supabase): Earned ${pointsEarned} pts. Total: ${stats.points}`);
+                        if (error) {
+                            console.error("Supabase upsert error:", error);
+                            onShowToast("Failed to save records", 'warn');
+                        } else {
+                            console.log(`Game Saved (Supabase): Earned ${pointsEarned} pts. Total: ${stats.points}`);
+                            onShowToast("Records Saved Successfully!", 'info');
+                        }
                     } else {
                         localStorage.setItem('reversi_pop_stats', JSON.stringify(stats));
                         console.log(`Game Saved (Local): Earned ${pointsEarned} pts. Total: ${stats.points}`);
+                        onShowToast("Game Saved (Local)", 'info');
                     }
 
                 } catch (e) {
                     console.error("Failed to save stats", e);
+                    onShowToast("Error saving game", 'warn');
                 }
             };
 
@@ -132,5 +120,5 @@ export const useGameStats = (
         } else if (!gameOver) {
             savedRef.current = false;
         }
-    }, [gameOver, level, scores, user, connectedAddress]);
+    }, [gameOver, level, scores, user, connectedAddress, onShowToast]);
 };

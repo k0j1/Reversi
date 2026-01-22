@@ -1,19 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Level, AppStats, LevelStats, FarcasterUser } from './types';
+import { Level, AppStats, FarcasterUser } from './types';
 import { supabase } from './lib/supabase';
-
-const INITIAL_LEVEL_STATS: LevelStats = { win: 0, loss: 0, draw: 0 };
-const INITIAL_STATS: AppStats = {
-    levels: {
-        1: { ...INITIAL_LEVEL_STATS },
-        2: { ...INITIAL_LEVEL_STATS },
-        3: { ...INITIAL_LEVEL_STATS },
-        4: { ...INITIAL_LEVEL_STATS },
-        5: { ...INITIAL_LEVEL_STATS },
-    },
-    total: { ...INITIAL_LEVEL_STATS },
-    points: 0
-};
+import { INITIAL_STATS } from './constants';
 
 type TitleScreenProps = {
     level: Level;
