@@ -17,9 +17,9 @@ export const useFarcaster = () => {
           const u = context.user as any;
           setUser({
             fid: context.user.fid,
-            username: context.user.username,
-            displayName: context.user.displayName,
-            pfpUrl: context.user.pfpUrl,
+            username: context.user.username ?? "",
+            displayName: context.user.displayName ?? "",
+            pfpUrl: context.user.pfpUrl ?? "",
             custodyAddress: u.custodyAddress,
             verifiedAddresses: u.verifiedAddresses,
           });
