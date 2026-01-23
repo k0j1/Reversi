@@ -27,3 +27,11 @@ export type FarcasterUser = {
     custodyAddress?: string;
     verifiedAddresses?: string[];
 };
+
+export type LeaderboardEntry = {
+    fid: number;
+    username: string;
+    display_name: string;
+    pfp_url: string;
+    points: number;
+};

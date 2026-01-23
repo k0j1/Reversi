@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Level, AppStats, FarcasterUser } from './types';
-import { supabase } from './lib/supabase';
-import { INITIAL_STATS, INITIAL_LEVEL_STATS } from './constants';
+import { Level, FarcasterUser } from './types';
+import { ProfileButton } from './components/title/ProfileButton';
+import { ProfileModal } from './components/title/ProfileModal';
+import { GameMenu } from './components/title/GameMenu';
+import { StatsView } from './components/title/StatsView';
+import { LeaderboardView } from './components/title/LeaderboardView';
+import { BottomNav } from './components/title/BottomNav';
 
 type TitleScreenProps = {
     level: Level;
@@ -13,84 +17,11 @@ type TitleScreenProps = {
     onError: (error: any) => void;
 };
 
+type Tab = 'GAME' | 'STATS' | 'LEADERBOARD';
+
 export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, connectWallet, onError }: TitleScreenProps) => {
-  const [activeTab, setActiveTab] = useState<'GAME' | 'STATS'>('GAME');
-  const [stats, setStats] = useState<AppStats | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>('GAME');
   const [showProfile, setShowProfile] = useState(false);
-
-  useEffect(() => {
-    if (activeTab === 'STATS') {
-        const loadStats = async () => {
-            try {
-                let loadedStats: AppStats = JSON.parse(JSON.stringify(INITIAL_STATS));
-                let found = false;
-
-                if (user) {
-                    // Fetch from Supabase with separate level columns
-                    const { data, error } = await supabase
-                        .from('reversi_game_stats')
-                        .select('points, level_1, level_2, level_3, level_4, level_5')
-                        .eq('fid', user.fid)
-                        .single();
-                    
-                    if (data) {
-                        loadedStats.points = data.points || 0;
-                        loadedStats.levels[1] = data.level_1 || { ...INITIAL_LEVEL_STATS };
-                        loadedStats.levels[2] = data.level_2 || { ...INITIAL_LEVEL_STATS };
-                        loadedStats.levels[3] = data.level_3 || { ...INITIAL_LEVEL_STATS };
-                        loadedStats.levels[4] = data.level_4 || { ...INITIAL_LEVEL_STATS };
-                        loadedStats.levels[5] = data.level_5 || { ...INITIAL_LEVEL_STATS };
-                        
-                        // Recalculate total
-                        loadedStats.total = { win: 0, loss: 0, draw: 0 };
-                        Object.values(loadedStats.levels).forEach((lvlStats: any) => {
-                            loadedStats.total.win += lvlStats.win || 0;
-                            loadedStats.total.loss += lvlStats.loss || 0;
-                            loadedStats.total.draw += lvlStats.draw || 0;
-                        });
-
-                        found = true;
-                    } else if (error && error.code !== 'PGRST116') {
-                        console.error("Supabase fetch error:", error);
-                        // Report error if it's not a "not found" error
-                        onError(error);
-                    }
-                }
-                
-                if (!found) {
-                    // Fallback to local storage if no user or no data found
-                    const data = localStorage.getItem('reversi_pop_stats');
-                    if (data) {
-                        const parsed = JSON.parse(data);
-                        if (parsed.levels) {
-                            // Load intersecting levels
-                            ([1, 2, 3, 4, 5] as Level[]).forEach(l => {
-                                if (parsed.levels[l]) loadedStats.levels[l] = parsed.levels[l];
-                            });
-                            // Recalculate total
-                            loadedStats.total = { win: 0, loss: 0, draw: 0 };
-                            Object.values(loadedStats.levels).forEach((lvlStats: any) => {
-                                loadedStats.total.win += lvlStats.win || 0;
-                                loadedStats.total.loss += lvlStats.loss || 0;
-                                loadedStats.total.draw += lvlStats.draw || 0;
-                            });
-                            loadedStats.points = parsed.points || 0;
-                        }
-                    }
-                }
-                
-                setStats(loadedStats);
-
-            } catch (e) {
-                console.error("Failed to load stats", e);
-                setStats(INITIAL_STATS);
-                onError(e);
-            }
-        };
-
-        loadStats();
-    }
-  }, [activeTab, user, onError]);
 
   // Auto-connect when profile is opened
   useEffect(() => {
@@ -99,335 +30,20 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
     }
   }, [showProfile, connectWallet]);
 
-  const getLevelLabel = (l: number) => {
-      switch(l) {
-          case 1: return 'Beginner';
-          case 2: return 'Easy';
-          case 3: return 'Normal';
-          case 4: return 'Hard';
-          case 5: return 'Expert';
-          default: return 'Normal';
-      }
-  };
-
-  const getLevelColor = (l: number) => {
-      switch(l) {
-          case 1: return 'bg-green-100 text-green-600 border-green-200';
-          case 2: return 'bg-teal-100 text-teal-600 border-teal-200';
-          case 3: return 'bg-yellow-100 text-yellow-600 border-yellow-200';
-          case 4: return 'bg-orange-100 text-orange-600 border-orange-200';
-          case 5: return 'bg-red-100 text-red-600 border-red-200';
-          default: return 'bg-slate-100 text-slate-600 border-slate-200';
-      }
-  };
-
-  const handleReset = async () => {
-    if(confirm("Are you sure you want to reset all records and points?")) {
-        try {
-            if (user) {
-                // Reset in Supabase with separate columns
-                const { error } = await supabase.from('reversi_game_stats')
-                    .update({ 
-                        points: 0,
-                        level_1: INITIAL_LEVEL_STATS,
-                        level_2: INITIAL_LEVEL_STATS,
-                        level_3: INITIAL_LEVEL_STATS,
-                        level_4: INITIAL_LEVEL_STATS,
-                        level_5: INITIAL_LEVEL_STATS
-                    })
-                    .eq('fid', user.fid);
-                
-                if (error) throw error;
-            }
-            
-            // Also reset local storage to be safe
-            localStorage.removeItem('reversi_pop_stats');
-            setStats(JSON.parse(JSON.stringify(INITIAL_STATS)));
-            
-        } catch (e) {
-            console.error("Failed to reset stats", e);
-            onError(e);
-        }
-    }
-  };
-
-  const renderProfileButton = () => {
-    if (!user) return null;
-    return (
-      <button
-        onClick={() => setShowProfile(true)}
-        className="absolute top-4 right-4 z-50 flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 pr-3 rounded-full shadow-sm border border-slate-200 hover:bg-white transition-all active:scale-95"
-      >
-        {user.pfpUrl ? (
-            <img src={user.pfpUrl} alt={user.username} className="w-8 h-8 rounded-full border border-slate-200" />
-        ) : (
-            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
-                <span className="text-sm">👤</span>
-            </div>
-        )}
-        <span className="text-xs font-bold text-slate-700 max-w-[80px] truncate">
-            {user.displayName || user.username}
-        </span>
-      </button>
-    );
-  };
-
-  const renderProfileModal = () => {
-    if (!showProfile || !user) return null;
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in">
-            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowProfile(false)}></div>
-            <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative z-10 flex flex-col gap-6 animate-bounce-in max-h-[85vh] overflow-y-auto border-4 border-slate-100">
-                <button
-                    onClick={() => setShowProfile(false)}
-                    className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full transition-colors"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                </button>
-                
-                {/* User Info Header */}
-                <div className="flex flex-col items-center gap-2 pt-2">
-                    {user.pfpUrl ? (
-                        <img src={user.pfpUrl} alt={user.username} className="w-24 h-24 rounded-full border-4 border-white shadow-lg bg-slate-100 object-cover" />
-                    ) : (
-                        <div className="w-24 h-24 rounded-full border-4 border-white shadow-lg bg-slate-200 flex items-center justify-center text-4xl">👤</div>
-                    )}
-                    <div className="text-center">
-                        <h3 className="text-xl font-black text-slate-800">{user.displayName}</h3>
-                        <p className="text-slate-500 font-bold">@{user.username}</p>
-                        <span className="inline-block mt-2 px-3 py-1 bg-slate-100 text-slate-500 text-xs font-bold rounded-full border border-slate-200">FID: {user.fid}</span>
-                    </div>
-                </div>
-
-                {/* Wallets Section */}
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 000-2z" clipRule="evenodd" />
-                        </svg>
-                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-wider">Wallet Information</h4>
-                    </div>
-                    
-                    {/* Connected Address */}
-                    <div className="space-y-1">
-                        <span className="text-xs font-bold text-slate-500 pl-1">Primary Address</span>
-                        {connectedAddress ? (
-                             <div className="bg-green-50 p-3 rounded-xl border border-green-100 break-all text-xs font-mono text-green-700 select-all hover:bg-green-100 transition-colors">
-                                {connectedAddress}
-                             </div>
-                        ) : (
-                            <button 
-                                onClick={connectWallet}
-                                className="w-full bg-slate-800 text-white text-xs font-bold py-3 px-4 rounded-xl hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                                Connect Wallet
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Other Addresses */}
-                    {(user.custodyAddress || (user.verifiedAddresses && user.verifiedAddresses.length > 0)) && (
-                        <div className="pt-2">
-                             <span className="text-xs font-bold text-slate-400 pl-1 mb-2 block">Other Addresses</span>
-                             <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
-                                {user.verifiedAddresses?.map((addr, i) => (
-                                    addr !== connectedAddress && (
-                                        <div key={i} className="bg-slate-50 p-2 rounded-lg border border-slate-100 break-all text-[10px] font-mono text-slate-500 select-all">
-                                            <span className="text-slate-400 font-bold mr-1">Verified:</span>
-                                            {addr}
-                                        </div>
-                                    )
-                                ))}
-                                {user.custodyAddress && user.custodyAddress !== connectedAddress && (
-                                    <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 break-all text-[10px] font-mono text-slate-500 select-all">
-                                        <span className="text-slate-400 font-bold mr-1">Custody:</span>
-                                        {user.custodyAddress}
-                                    </div>
-                                )}
-                             </div>
-                        </div>
-                    )}
-                </div>
-                
-                <div className="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-auto">
-                    Connected via Farcaster
-                </div>
-            </div>
-        </div>
-    );
-  };
-
-  const renderGameContent = () => (
-    <div className="w-full bg-white p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] space-y-8 border-2 border-slate-100 animate-fade-in">
-        
-        <div className="space-y-4">
-            <div className="flex justify-between items-center px-1">
-                <label className="text-xl font-bold text-slate-700">AI Strength</label>
-                <span className={`text-lg font-bold px-4 py-1 rounded-full border-2 ${getLevelColor(level)}`}>
-                    {getLevelLabel(level)}
-                </span>
-            </div>
-            
-            <div className="relative pt-2 pb-8">
-                <input 
-                    type="range" 
-                    min="1" 
-                    max="5" 
-                    step="1"
-                    value={level} 
-                    onChange={(e) => setLevel(Number(e.target.value) as Level)}
-                    className="w-full h-4 bg-slate-200 rounded-full appearance-none cursor-pointer accent-orange-500 hover:accent-orange-400 focus:outline-none"
-                    style={{
-                        background: `linear-gradient(to right, 
-                            #fb923c 0%, 
-                            #fb923c ${(level - 1) * 25}%, 
-                            #e2e8f0 ${(level - 1) * 25}%, 
-                            #e2e8f0 100%)`
-                    }}
-                />
-                <div className="flex justify-between text-xs text-slate-400 font-bold mt-3 px-1">
-                    <span>1</span>
-                    <span>2</span>
-                    <span>3</span>
-                    <span>4</span>
-                    <span>5</span>
-                </div>
-            </div>
-        </div>
-
-        <button 
-            onClick={onStart}
-            className="w-full bg-orange-500 hover:bg-orange-400 text-white font-bold text-2xl py-5 px-6 rounded-2xl transition-all shadow-[0_6px_0_rgb(194,65,12)] hover:shadow-[0_4px_0_rgb(194,65,12)] hover:translate-y-[2px] active:shadow-none active:translate-y-[6px] flex items-center justify-center gap-3"
-        >
-            <span>Play Now</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-            </svg>
-        </button>
-    </div>
-  );
-
-  const renderOtherApps = () => (
-     <div className="w-full animate-fade-in flex flex-col items-center gap-4 px-2">
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Other Apps</span>
-        <a 
-            href="https://farcaster.xyz/miniapps/7RH3c4fEALgF/runningchihuahua" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="group relative block w-16 h-16 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 ring-4 ring-white"
-        >
-            <img 
-                src="https://runningchihuahuaai.k0j1.v2002.coreserver.jp/images/icon.png" 
-                alt="Running Chihuahua" 
-                className="w-full h-full object-cover"
-            />
-        </a>
-     </div>
-  );
-
-  const renderStatsContent = () => (
-    <div className="w-full space-y-4 animate-fade-in">
-        <h2 className="text-2xl font-bold text-slate-700 text-center mb-4">Your Records</h2>
-        
-        {stats && (
-            <>
-                {/* Total Score & Points Card */}
-                <div className="bg-gradient-to-br from-slate-800 to-slate-700 p-6 rounded-[2rem] shadow-lg text-white mb-6 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                    <div className="relative z-10 flex flex-col items-center gap-2">
-                        <span className="text-slate-300 text-sm font-bold uppercase tracking-wider">Total Points</span>
-                        <span className="text-5xl font-black text-yellow-400 drop-shadow-md">{stats.points.toLocaleString()}</span>
-                        <div className="h-px w-full bg-white/10 my-2"></div>
-                        <div className="flex justify-between w-full px-4 text-sm font-bold">
-                            <div className="flex flex-col items-center">
-                                <span className="text-green-400 text-lg">{stats.total.win}</span>
-                                <span className="text-slate-400 text-xs">Wins</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <span className="text-white text-lg">{stats.total.draw}</span>
-                                <span className="text-slate-400 text-xs">Draws</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <span className="text-orange-400 text-lg">{stats.total.loss}</span>
-                                <span className="text-slate-400 text-xs">Losses</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Level Breakdown */}
-                <h3 className="text-lg font-bold text-slate-500 px-2">Level Breakdown</h3>
-                {([1, 2, 3, 4, 5] as Level[]).map((lvl) => {
-                    const data = stats.levels[lvl] || { win: 0, loss: 0, draw: 0 };
-                    const total = data.win + data.loss + data.draw;
-                    const winRate = total > 0 ? Math.round((data.win / total) * 100) : 0;
-                    
-                    let colorClass = '';
-                    switch(lvl) {
-                        case 1: colorClass = 'text-green-500 bg-green-50 border-green-200'; break;
-                        case 2: colorClass = 'text-teal-500 bg-teal-50 border-teal-200'; break;
-                        case 3: colorClass = 'text-yellow-500 bg-yellow-50 border-yellow-200'; break;
-                        case 4: colorClass = 'text-orange-500 bg-orange-50 border-orange-200'; break;
-                        case 5: colorClass = 'text-red-500 bg-red-50 border-red-200'; break;
-                    }
-                    
-                    return (
-                        <div key={lvl} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-3">
-                            <div className="flex justify-between items-center">
-                                <span className={`font-bold px-3 py-1 rounded-full text-sm border ${colorClass}`}>
-                                    {getLevelLabel(lvl)}
-                                </span>
-                                <span className="text-slate-400 text-xs font-bold">Matches: {total}</span>
-                            </div>
-                            
-                            {total === 0 ? (
-                                <div className="text-center text-slate-400 text-sm py-2">No games played yet.</div>
-                            ) : (
-                                <>
-                                    <div className="flex justify-between text-sm font-bold text-slate-600 px-1">
-                                        <span className="text-green-600">Wins: {data.win}</span>
-                                        <span className="text-slate-400">Draws: {data.draw}</span>
-                                        <span className="text-orange-600">Losses: {data.loss}</span>
-                                    </div>
-                                    
-                                    {/* Win Rate Bar */}
-                                    <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                                        <div style={{ width: `${(data.win / total) * 100}%` }} className="h-full bg-green-500"></div>
-                                        <div style={{ width: `${(data.draw / total) * 100}%` }} className="h-full bg-slate-300"></div>
-                                        <div style={{ width: `${(data.loss / total) * 100}%` }} className="h-full bg-orange-500"></div>
-                                    </div>
-                                    <div className="text-right text-xs font-bold text-slate-400">
-                                        Win Rate: {winRate}%
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    );
-                })}
-            </>
-        )}
-        
-        <button 
-            onClick={handleReset}
-            className="w-full mt-4 py-2 text-slate-400 text-sm font-bold hover:text-red-500 transition-colors"
-        >
-            Reset Records
-        </button>
-    </div>
-  );
-
   return (
     <div className="flex flex-col h-[100dvh] w-full relative">
-        {/* Profile Button - Only visible if user is logged in */}
-        {renderProfileButton()}
+        {/* Profile Button */}
+        <ProfileButton user={user} onClick={() => setShowProfile(true)} />
         
-        {/* Modals */}
-        {renderProfileModal()}
+        {/* Profile Modal */}
+        {showProfile && (
+            <ProfileModal 
+                user={user} 
+                connectedAddress={connectedAddress} 
+                connectWallet={connectWallet} 
+                onClose={() => setShowProfile(false)} 
+            />
+        )}
 
         <div className="flex-1 overflow-y-auto w-full">
             <div className="min-h-full flex flex-col items-center p-4 w-full max-w-md mx-auto relative z-10 pb-32">
@@ -457,40 +73,23 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
                         <p className="text-slate-500 font-bold text-lg">Can you beat the AI?</p>
                     </div>
 
-                    {activeTab === 'GAME' ? (
-                        <>
-                            {renderGameContent()}
-                            {renderOtherApps()}
-                        </>
-                    ) : renderStatsContent()}
+                    {activeTab === 'GAME' && (
+                        <GameMenu level={level} setLevel={setLevel} onStart={onStart} />
+                    )}
+                    
+                    {activeTab === 'STATS' && (
+                        <StatsView user={user} onError={onError} />
+                    )}
+
+                    {activeTab === 'LEADERBOARD' && (
+                        <LeaderboardView currentFid={user?.fid} onError={onError} />
+                    )}
                 </div>
             </div>
         </div>
 
         {/* Bottom Navigation */}
-        <div className="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-50">
-            <div className="max-w-md mx-auto flex justify-around p-2">
-                <button 
-                    onClick={() => setActiveTab('GAME')}
-                    className={`flex flex-col items-center p-3 rounded-2xl w-full transition-all duration-200 ${activeTab === 'GAME' ? 'text-orange-500 bg-orange-50' : 'text-slate-400 hover:text-slate-600'}`}
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 mb-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M11 17a1 1 0 001.447.894l4-2A1 1 0 0017 15V9.236a1 1 0 00-1.447-.894l-4 2a1 1 0 00-.553.894V17zM15.211 6.276a1 1 0 000-1.788l-4.764-2.382a1 1 0 00-.894 0L4.789 4.488a1 1 0 000 1.788l4.764 2.382a1 1 0 00.894 0l4.764-2.382zM4.447 8.342A1 1 0 003 9.236V15a1 1 0 00.553.894l4 2A1 1 0 009 17v-5.764a1 1 0 00-.553-.894l-4-2z" />
-                    </svg>
-                    <span className="text-xs font-bold">Game</span>
-                </button>
-                
-                <button 
-                    onClick={() => setActiveTab('STATS')}
-                    className={`flex flex-col items-center p-3 rounded-2xl w-full transition-all duration-200 ${activeTab === 'STATS' ? 'text-orange-500 bg-orange-50' : 'text-slate-400 hover:text-slate-600'}`}
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 mb-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-                    </svg>
-                    <span className="text-xs font-bold">Stats</span>
-                </button>
-            </div>
-        </div>
+        <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
 };
