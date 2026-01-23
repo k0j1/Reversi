@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Level, FarcasterUser } from './types';
 import { ProfileButton } from './components/title/ProfileButton';
@@ -82,7 +83,7 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
                     )}
 
                     {activeTab === 'LEADERBOARD' && (
-                        <LeaderboardView currentFid={user?.fid} onError={onError} />
+                        <LeaderboardView currentFid={user?.fid} />
                     )}
                 </div>
             </div>

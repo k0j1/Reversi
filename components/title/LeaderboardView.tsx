@@ -1,13 +1,13 @@
+
 import { useState, useEffect } from 'react';
 import { LeaderboardEntry } from '../../types';
 import { supabase } from '../../lib/supabase';
 
 type LeaderboardViewProps = {
     currentFid?: number;
-    onError: (error: any) => void;
 };
 
-export const LeaderboardView = ({ currentFid, onError }: LeaderboardViewProps) => {
+export const LeaderboardView = ({ currentFid }: LeaderboardViewProps) => {
     const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [fetchError, setFetchError] = useState<boolean>(false);

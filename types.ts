@@ -21,9 +21,9 @@ export type AppStats = {
 
 export type FarcasterUser = {
     fid: number;
-    username?: string;
-    displayName?: string;
-    pfpUrl?: string;
+    username: string;
+    displayName: string;
+    pfpUrl: string;
     custodyAddress?: string;
     verifiedAddresses?: string[];
 };
