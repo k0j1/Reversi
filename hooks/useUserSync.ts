@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { FarcasterUser } from '../types';
 import { supabase } from '../lib/supabase';
-import { INITIAL_STATS } from '../constants';
+import { INITIAL_LEVEL_STATS, INITIAL_STATS } from '../constants';
 
 export const useUserSync = (user: FarcasterUser | undefined, connectedAddress: string | null) => {
     useEffect(() => {
@@ -41,13 +41,17 @@ export const useUserSync = (user: FarcasterUser | undefined, connectedAddress: s
                     if (updateError) console.error("Failed to update user profile:", updateError);
                     else console.log("User profile synced to Supabase");
                 } else {
-                    // New user: Insert with initial stats
+                    // New user: Insert with initial stats (split into level columns)
                     const { error: insertError } = await supabase
                         .from('reversi_game_stats')
                         .insert({
                             ...profileData,
-                            stats: INITIAL_STATS,
-                            points: 0
+                            points: 0,
+                            level_1: INITIAL_LEVEL_STATS,
+                            level_2: INITIAL_LEVEL_STATS,
+                            level_3: INITIAL_LEVEL_STATS,
+                            level_4: INITIAL_LEVEL_STATS,
+                            level_5: INITIAL_LEVEL_STATS
                         });
 
                     if (insertError) console.error("Failed to create new user record:", insertError);

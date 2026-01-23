@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Level, AppStats, FarcasterUser } from './types';
 import { supabase } from './lib/supabase';
-import { INITIAL_STATS } from './constants';
+import { INITIAL_STATS, INITIAL_LEVEL_STATS } from './constants';
 
 type TitleScreenProps = {
     level: Level;
@@ -25,15 +25,29 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
                 let found = false;
 
                 if (user) {
-                    // Fetch from Supabase
+                    // Fetch from Supabase with separate level columns
                     const { data, error } = await supabase
                         .from('reversi_game_stats')
-                        .select('stats')
+                        .select('points, level_1, level_2, level_3, level_4, level_5')
                         .eq('fid', user.fid)
                         .single();
                     
-                    if (data?.stats) {
-                        loadedStats = data.stats;
+                    if (data) {
+                        loadedStats.points = data.points || 0;
+                        loadedStats.levels[1] = data.level_1 || { ...INITIAL_LEVEL_STATS };
+                        loadedStats.levels[2] = data.level_2 || { ...INITIAL_LEVEL_STATS };
+                        loadedStats.levels[3] = data.level_3 || { ...INITIAL_LEVEL_STATS };
+                        loadedStats.levels[4] = data.level_4 || { ...INITIAL_LEVEL_STATS };
+                        loadedStats.levels[5] = data.level_5 || { ...INITIAL_LEVEL_STATS };
+                        
+                        // Recalculate total
+                        loadedStats.total = { win: 0, loss: 0, draw: 0 };
+                        Object.values(loadedStats.levels).forEach((lvlStats: any) => {
+                            loadedStats.total.win += lvlStats.win || 0;
+                            loadedStats.total.loss += lvlStats.loss || 0;
+                            loadedStats.total.draw += lvlStats.draw || 0;
+                        });
+
                         found = true;
                     } else if (error && error.code !== 'PGRST116') {
                         console.error("Supabase fetch error:", error);
@@ -107,11 +121,15 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
     if(confirm("Are you sure you want to reset all records and points?")) {
         try {
             if (user) {
-                // Reset in Supabase
+                // Reset in Supabase with separate columns
                 await supabase.from('reversi_game_stats')
                     .update({ 
-                        stats: INITIAL_STATS,
-                        points: 0 
+                        points: 0,
+                        level_1: INITIAL_LEVEL_STATS,
+                        level_2: INITIAL_LEVEL_STATS,
+                        level_3: INITIAL_LEVEL_STATS,
+                        level_4: INITIAL_LEVEL_STATS,
+                        level_5: INITIAL_LEVEL_STATS
                     })
                     .eq('fid', user.fid);
             }
