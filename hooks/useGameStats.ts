@@ -104,7 +104,7 @@ export const useGameStats = (
                                 pfp_url: user.pfpUrl,
                                 custody_address: user.custodyAddress,
                                 verified_addresses: user.verifiedAddresses,
-                                connected_address: connectedAddress,
+                                // connected_address removed to fix schema error
                                 points: stats.points,
                                 level_1: stats.levels[1],
                                 level_2: stats.levels[2],

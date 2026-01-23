@@ -36,17 +36,13 @@ const App = () => {
           .select('count', { count: 'exact', head: true });
         
         if (dbError) {
-          throw new Error(`DB Connection Failed: ${dbError.message} (${dbError.code})`);
+          console.warn(`DB Connection Warning: ${dbError.message} (${dbError.code})`);
+          // We don't throw or setError here because the app can work offline
+        } else {
+          console.log("DB Connection Verified");
         }
-        console.log("DB Connection Verified");
       } catch (e: any) {
-        // If it's a network error or missing table, report it
-        // We only report if it seems like a configuration issue, not just offline
-        console.error("DB Connection Check Failed:", e);
-        // Only show dialog on startup if it's a critical config error to avoid annoying offline users too much
-        if (e.message && (e.message.includes("Postgrest") || e.message.includes("apikey"))) {
-             setError(e);
-        }
+        console.warn("DB Connection Check Failed (Network?):", e);
       }
     };
 

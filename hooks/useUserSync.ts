@@ -21,9 +21,8 @@ export const useUserSync = (
                     .single();
 
                 if (error && error.code !== 'PGRST116') {
-                    console.error("Error checking user existence:", error);
-                    // This might be a connection error
-                    onError(error);
+                    console.warn("User sync check failed (offline?):", error);
+                    // Do not block app with onError for background sync issues
                     return;
                 }
 
@@ -33,8 +32,8 @@ export const useUserSync = (
                     display_name: user.displayName,
                     pfp_url: user.pfpUrl,
                     custody_address: user.custodyAddress,
-                    verified_addresses: user.verifiedAddresses,
-                    connected_address: connectedAddress
+                    verified_addresses: user.verifiedAddresses
+                    // connected_address removed to fix schema error
                 };
 
                 if (existing) {
@@ -45,8 +44,7 @@ export const useUserSync = (
                         .eq('fid', user.fid);
                     
                     if (updateError) {
-                        console.error("Failed to update user profile:", updateError);
-                        onError(updateError);
+                        console.warn("Failed to update user profile:", updateError);
                     } else {
                         console.log("User profile synced to Supabase");
                     }
@@ -65,15 +63,14 @@ export const useUserSync = (
                         });
 
                     if (insertError) {
-                         console.error("Failed to create new user record:", insertError);
-                         onError(insertError);
+                         console.warn("Failed to create new user record:", insertError);
                     } else {
                         console.log("New user record created in Supabase");
                     }
                 }
             } catch (e) {
-                console.error("Unexpected error syncing user:", e);
-                onError(e);
+                console.warn("Unexpected error syncing user:", e);
+                // Do not call onError here to avoid blocking startup
             }
         };
 
