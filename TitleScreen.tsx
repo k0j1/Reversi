@@ -10,9 +10,10 @@ type TitleScreenProps = {
     user?: FarcasterUser;
     connectedAddress: string | null;
     connectWallet: () => Promise<void>;
+    onError: (error: any) => void;
 };
 
-export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, connectWallet }: TitleScreenProps) => {
+export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, connectWallet, onError }: TitleScreenProps) => {
   const [activeTab, setActiveTab] = useState<'GAME' | 'STATS'>('GAME');
   const [stats, setStats] = useState<AppStats | null>(null);
   const [showProfile, setShowProfile] = useState(false);
@@ -51,6 +52,8 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
                         found = true;
                     } else if (error && error.code !== 'PGRST116') {
                         console.error("Supabase fetch error:", error);
+                        // Report error if it's not a "not found" error
+                        onError(error);
                     }
                 }
                 
@@ -81,12 +84,13 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
             } catch (e) {
                 console.error("Failed to load stats", e);
                 setStats(INITIAL_STATS);
+                onError(e);
             }
         };
 
         loadStats();
     }
-  }, [activeTab, user]);
+  }, [activeTab, user, onError]);
 
   // Auto-connect when profile is opened
   useEffect(() => {
@@ -122,7 +126,7 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
         try {
             if (user) {
                 // Reset in Supabase with separate columns
-                await supabase.from('reversi_game_stats')
+                const { error } = await supabase.from('reversi_game_stats')
                     .update({ 
                         points: 0,
                         level_1: INITIAL_LEVEL_STATS,
@@ -132,6 +136,8 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
                         level_5: INITIAL_LEVEL_STATS
                     })
                     .eq('fid', user.fid);
+                
+                if (error) throw error;
             }
             
             // Also reset local storage to be safe
@@ -140,6 +146,7 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
             
         } catch (e) {
             console.error("Failed to reset stats", e);
+            onError(e);
         }
     }
   };

@@ -10,9 +10,10 @@ type GameProps = {
     onExit: () => void;
     user?: FarcasterUser;
     connectedAddress: string | null;
+    onError: (error: any) => void;
 };
 
-export const Game = ({ level, onExit, user, connectedAddress }: GameProps) => {
+export const Game = ({ level, onExit, user, connectedAddress, onError }: GameProps) => {
   const {
     board,
     turn,
@@ -23,7 +24,7 @@ export const Game = ({ level, onExit, user, connectedAddress }: GameProps) => {
     lastMove,
     toast,
     handleCellClick
-  } = useGameLogic(level, user, connectedAddress);
+  } = useGameLogic(level, onError, user, connectedAddress);
 
   // Calculate result details for display
   const isWin = scores.black > scores.white;

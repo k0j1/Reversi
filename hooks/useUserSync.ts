@@ -3,7 +3,11 @@ import { FarcasterUser } from '../types';
 import { supabase } from '../lib/supabase';
 import { INITIAL_LEVEL_STATS } from '../constants';
 
-export const useUserSync = (user: FarcasterUser | undefined, connectedAddress: string | null) => {
+export const useUserSync = (
+    user: FarcasterUser | undefined, 
+    connectedAddress: string | null,
+    onError: (error: any) => void
+) => {
     useEffect(() => {
         if (!user) return;
 
@@ -18,6 +22,8 @@ export const useUserSync = (user: FarcasterUser | undefined, connectedAddress: s
 
                 if (error && error.code !== 'PGRST116') {
                     console.error("Error checking user existence:", error);
+                    // This might be a connection error
+                    onError(error);
                     return;
                 }
 
@@ -38,8 +44,12 @@ export const useUserSync = (user: FarcasterUser | undefined, connectedAddress: s
                         .update(profileData)
                         .eq('fid', user.fid);
                     
-                    if (updateError) console.error("Failed to update user profile:", updateError);
-                    else console.log("User profile synced to Supabase");
+                    if (updateError) {
+                        console.error("Failed to update user profile:", updateError);
+                        onError(updateError);
+                    } else {
+                        console.log("User profile synced to Supabase");
+                    }
                 } else {
                     // New user: Insert with initial stats (split into level columns)
                     const { error: insertError } = await supabase
@@ -54,14 +64,19 @@ export const useUserSync = (user: FarcasterUser | undefined, connectedAddress: s
                             level_5: INITIAL_LEVEL_STATS
                         });
 
-                    if (insertError) console.error("Failed to create new user record:", insertError);
-                    else console.log("New user record created in Supabase");
+                    if (insertError) {
+                         console.error("Failed to create new user record:", insertError);
+                         onError(insertError);
+                    } else {
+                        console.log("New user record created in Supabase");
+                    }
                 }
             } catch (e) {
                 console.error("Unexpected error syncing user:", e);
+                onError(e);
             }
         };
 
         syncUser();
-    }, [user, connectedAddress]);
+    }, [user, connectedAddress, onError]);
 };

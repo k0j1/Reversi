@@ -1,4 +1,3 @@
-
 type ToastProps = {
   msg: string;
   type: 'info' | 'warn';
@@ -6,9 +5,12 @@ type ToastProps = {
 
 export const Toast = ({ msg, type }: ToastProps) => {
   return (
-    <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 animate-bounce pointer-events-none w-[90%] max-w-sm flex justify-center">
+    // Changed positioning logic: Use left-4 right-4 with max-w to ensure it fits on screen
+    // Moved z-index higher to ensure visibility over other elements
+    <div className="fixed top-16 left-4 right-4 flex justify-center z-[150] pointer-events-none animate-bounce">
       <div className={`
-        w-full px-6 py-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.2)] border-4 font-bold text-lg flex items-center justify-center gap-3 text-center
+        pointer-events-auto
+        w-full max-w-sm px-6 py-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.2)] border-4 font-bold text-lg flex items-center justify-center gap-3 text-center
         ${type === 'warn' ? 'bg-orange-500 border-orange-600 text-white' : 'bg-white border-green-500 text-green-600'}
       `}>
         {type === 'warn' ? (
@@ -18,7 +20,7 @@ export const Toast = ({ msg, type }: ToastProps) => {
         ) : (
           <span className="text-2xl flex-shrink-0">🏆</span>
         )}
-        {msg}
+        <span className="break-words leading-tight">{msg}</span>
       </div>
     </div>
   );
