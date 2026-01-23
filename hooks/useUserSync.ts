@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { FarcasterUser } from '../types';
 import { supabase } from '../lib/supabase';
-import { INITIAL_LEVEL_STATS, INITIAL_STATS } from '../constants';
+import { INITIAL_LEVEL_STATS } from '../constants';
 
 export const useUserSync = (user: FarcasterUser | undefined, connectedAddress: string | null) => {
     useEffect(() => {
