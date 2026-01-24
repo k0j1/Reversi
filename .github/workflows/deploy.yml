@@ -1,5 +1,5 @@
 
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages and FTP
 
 on:
   push:
@@ -33,6 +33,17 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build
+      
+      # FTP Deploy to CoreServer
+      - name: FTP Deploy
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./dist/
+          server-dir: ./
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
