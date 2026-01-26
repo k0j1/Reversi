@@ -21,21 +21,55 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      
+      # Setup Node.js for Frontend
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          # cache: 'npm' # package-lock.jsonがない場合エラーになるためコメントアウト
-      - name: Install dependencies
-        run: npm install # npm ci はロックファイル必須のため、npm installに変更
+      
+      # Setup PHP for Backend
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, gmp, bcmath
+          tools: composer:v2
+
+      # Install Node dependencies
+      - name: Install Node dependencies
+        run: npm install
+
+      # Install PHP dependencies
+      - name: Install PHP dependencies
+        run: |
+          if [ -f "api/composer.json" ]; then
+            cd api
+            composer install --no-dev --optimize-autoloader
+            cd ..
+          fi
+
+      # Build Project
       - name: Build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
+          # Build Frontend
           npm run build
+          
+          # Prepare API directory in dist
           mkdir -p dist/api
-          if [ -d "api" ]; then cp api/*.php dist/api/; fi
+          
+          # Copy PHP files
+          if [ -d "api" ]; then 
+            cp api/*.php dist/api/
+            
+            # Copy vendor directory if it exists
+            if [ -d "api/vendor" ]; then
+              cp -r api/vendor dist/api/
+            fi
+          fi
       
       # FTP Deploy to CoreServer
       - name: FTP Deploy
@@ -46,6 +80,11 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
           server-dir: ./
+          # Ensure vendor directory is synced efficiently
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
