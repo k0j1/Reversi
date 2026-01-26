@@ -1,12 +1,14 @@
-import { Level } from '../../types';
+import { Level, FarcasterUser } from '../../types';
+import { ClaimBonus } from './ClaimBonus';
 
 type GameMenuProps = {
     level: Level;
     setLevel: (l: Level) => void;
     onStart: () => void;
+    user?: FarcasterUser;
 };
 
-export const GameMenu = ({ level, setLevel, onStart }: GameMenuProps) => {
+export const GameMenu = ({ level, setLevel, onStart, user }: GameMenuProps) => {
     const getLevelLabel = (l: number) => {
         switch(l) {
             case 1: return 'Beginner';
@@ -30,8 +32,8 @@ export const GameMenu = ({ level, setLevel, onStart }: GameMenuProps) => {
     };
 
     return (
-        <div className="w-full flex flex-col items-center gap-8">
-            <div className="w-full bg-white p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] space-y-8 border-2 border-slate-100 animate-fade-in">
+        <div className="w-full flex flex-col items-center gap-6">
+            <div className="w-full bg-white p-6 pb-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] space-y-6 border-2 border-slate-100 animate-fade-in">
                 
                 <div className="space-y-4">
                     <div className="flex justify-between items-center px-1">
@@ -41,7 +43,7 @@ export const GameMenu = ({ level, setLevel, onStart }: GameMenuProps) => {
                         </span>
                     </div>
                     
-                    <div className="relative pt-2 pb-8">
+                    <div className="relative pt-2 pb-6">
                         <input 
                             type="range" 
                             min="1" 
@@ -79,7 +81,10 @@ export const GameMenu = ({ level, setLevel, onStart }: GameMenuProps) => {
                 </button>
             </div>
 
-            <div className="w-full animate-fade-in flex flex-col items-start gap-4 px-2">
+            {/* Login Bonus Button */}
+            <ClaimBonus user={user} />
+
+            <div className="w-full animate-fade-in flex flex-col items-start gap-3 px-2">
                 <span className="w-full text-left text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Other Apps</span>
                 
                 <div className="flex justify-start gap-4">

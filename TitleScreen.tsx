@@ -75,7 +75,7 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
                     </div>
 
                     {activeTab === 'GAME' && (
-                        <GameMenu level={level} setLevel={setLevel} onStart={onStart} />
+                        <GameMenu level={level} setLevel={setLevel} onStart={onStart} user={user} />
                     )}
                     
                     {activeTab === 'STATS' && (
