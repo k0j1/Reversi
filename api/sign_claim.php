@@ -1,29 +1,28 @@
 <?php
-// This script acts as a signing oracle. 
-// It requires Composer packages: kornrunner/keccak, simplito/elliptic-php, vlucas/phpdotenv
+// This script acts purely as a signing oracle. 
+// It receives an amount from the frontend and signs it.
+// It does NOT validate the score against the database (trusts frontend/game logic).
+// Dependencies: kornrunner/keccak, simplito/elliptic-php, vlucas/phpdotenv
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
-// 1. Load Dependencies (if Composer is used)
+// 1. Load Dependencies
 if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require_once __DIR__ . '/vendor/autoload.php';
 }
 
-// 2. Environment Variable Loading
-// Try vlucas/phpdotenv first
+// 2. Load Environment Variables
 if (class_exists('Dotenv\Dotenv')) {
     try {
         $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
         $dotenv->safeLoad();
-    } catch (Exception $e) {
-        // Ignore errors if .env doesn't exist or is unreadable
-    }
+    } catch (Exception $e) {}
 }
 
-// Manual Fallback for .env loading (if library missing or failed)
+// Manual Fallback for .env
 function manualLoadEnv($path) {
     if (!file_exists($path)) return;
     $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -47,18 +46,17 @@ function manualLoadEnv($path) {
 manualLoadEnv(__DIR__ . '/.env');
 
 // 3. Configuration
-// Check multiple possible key names
 $privateKey = $_ENV['WALLET_PRIVATE_KEY'] ?? getenv('WALLET_PRIVATE_KEY') ?? $_ENV['PRIVATE_KEY'] ?? getenv('PRIVATE_KEY');
-$contractAddress = $_ENV['CONTRACT_ADDRESS'] ?? getenv('CONTRACT_ADDRESS') ?: '0x23C476eD8710725B06EC33bE3195219aCcfCE0E4';
 
 // 4. Input Parsing
+// We trust the 'amount' sent from the frontend.
 $input = json_decode(file_get_contents('php://input'), true);
 $userAddress = $input['address'] ?? null;
 $amountRaw = $input['amount'] ?? 0;
 
 if (!$userAddress || $amountRaw <= 0) {
     http_response_code(400);
-    echo json_encode(['error' => 'Invalid input: Missing address or amount']);
+    echo json_encode(['error' => 'Invalid input']);
     exit;
 }
 
@@ -67,51 +65,58 @@ function strip0x($str) {
     return (strpos($str, '0x') === 0) ? substr($str, 2) : $str;
 }
 
-// 5. Signature Generation Logic
+// Helper: Safe Decimal to Hex conversion (BCMath/GMP) to prevent precision loss
+function dec2hex($number) {
+    if (function_exists('gmp_init')) {
+        return gmp_strval(gmp_init($number), 16);
+    }
+    if (function_exists('bcdiv')) {
+        $hex = '';
+        $num = $number;
+        while (bccomp($num, '0') > 0) {
+            $mod = bcmod($num, '16');
+            $hex = dechex((int)$mod) . $hex;
+            $num = bcdiv($num, '16', 0);
+        }
+        return $hex ?: '0';
+    }
+    return base_convert($number, 10, 16);
+}
+
+// 5. Signature Generation
 $isMock = true;
 $signature = "0x00";
+$amountWei = "0";
 
-// Check if we have the private key and the necessary classes for real signing
-if ($privateKey && class_exists('kornrunner\Keccak') && class_exists('Elliptic\EC')) {
-    try {
-        // --- Amount Conversion (to Wei) ---
-        if (function_exists('bcmul')) {
-            $amountWei = bcmul((string)$amountRaw, '1000000000000000000'); 
-        } else {
-            $amountWei = (string)($amountRaw * 1000000000000000000); 
-        }
+try {
+    // Convert Amount to Wei (10^18)
+    if (function_exists('bcmul')) {
+        $amountWei = bcmul((string)$amountRaw, '1000000000000000000'); 
+    } else {
+        $amountWei = number_format($amountRaw * 1000000000000000000, 0, '', '');
+    }
 
-        // --- Packing Data ---
-        // packing: userAddress (20 bytes) + amount (32 bytes)
-        // matches solidity: abi.encodePacked(user, amount)
+    if ($privateKey && class_exists('kornrunner\Keccak') && class_exists('Elliptic\EC')) {
         
+        // Packing: abi.encodePacked(address, uint256)
         $addressHex = strip0x($userAddress);
         $addressBin = hex2bin($addressHex);
         
-        // Convert decimal string to hex, then pad to 32 bytes
-        // Note: For very large numbers in PHP, dechex might lose precision if not using BCMath/GMP.
-        // Simplified approach for standard reward amounts:
-        if (function_exists('gmp_init')) {
-            $amountHex = gmp_strval(gmp_init($amountWei), 16);
-        } else {
-            // Fallback (might not handle huge wei values correctly without GMP/BCMath custom hex conversion)
-            // But sufficient for game points
-            $amountHex = base_convert($amountWei, 10, 16);
-        }
-        $amountHex = str_pad($amountHex, 64, '0', STR_PAD_LEFT);
+        $amountHex = dec2hex($amountWei);
+        $amountHex = str_pad($amountHex, 64, '0', STR_PAD_LEFT); // uint256 is 32 bytes
         $amountBin = hex2bin($amountHex);
 
         $packed = $addressBin . $amountBin;
 
-        // --- Hashing ---
+        // Hash
         $dataHashHex = kornrunner\Keccak::hash($packed, 256);
         $dataHashBin = hex2bin($dataHashHex);
 
-        // --- EIP-191 Prefix ---
+        // Prefix
         $prefix = "\x19Ethereum Signed Message:\n32";
         $finalHashHex = kornrunner\Keccak::hash($prefix . $dataHashBin, 256);
 
-        // --- Signing ---
+        // Sign
         $ec = new Elliptic\EC('secp256k1');
         $key = $ec->keyFromPrivate(strip0x($privateKey));
         $sig = $key->sign($finalHashHex, ['canonical' => true]);
@@ -123,27 +128,20 @@ if ($privateKey && class_exists('kornrunner\Keccak') && class_exists('Elliptic\E
         $signature = '0x' . $r . $s . $v;
         $isMock = false;
 
-    } catch (Exception $e) {
-        // If signing fails (e.g. invalid key format), fallback to mock or error
-        error_log("Signing failed: " . $e->getMessage());
-        $isMock = true; 
-    }
-} else {
-    // Missing libraries or private key -> Mock
-    // Generate a random mock signature
-    try {
+    } else {
+        // Fallback for dev environment without libraries
         $random = bin2hex(random_bytes(65));
         $signature = "0x" . $random;
-    } catch (Exception $e) {
-        $signature = "0x" . md5(uniqid());
+        $isMock = true;
     }
+} catch (Exception $e) {
+    error_log("Signing failed: " . $e->getMessage());
     $isMock = true;
 }
 
-// Return
 echo json_encode([
     'success' => true,
-    'amount' => isset($amountWei) ? $amountWei : (string)($amountRaw * 1000000000000000000),
+    'amount' => $amountWei,
     'signature' => $signature,
     'displayAmount' => $amountRaw,
     'isMock' => $isMock

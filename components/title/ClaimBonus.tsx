@@ -4,7 +4,7 @@ import { FarcasterUser } from '../../types';
 import { ethers } from 'ethers';
 import sdk from '@farcaster/frame-sdk';
 
-// Contract ABI (Simplified)
+// Contract ABI
 const CONTRACT_ABI = [
   "function claim(uint256 amount, bytes signature) external",
   "function getRemainingBalance() external view returns (uint256)",
@@ -23,6 +23,7 @@ type ClaimBonusProps = {
 export const ClaimBonus = ({ user }: ClaimBonusProps) => {
     const [loading, setLoading] = useState(false);
     const [claimableTotal, setClaimableTotal] = useState<number | null>(null);
+    const [rewardPart, setRewardPart] = useState<number>(0);
     const [nextClaimTime, setNextClaimTime] = useState<Date | null>(null);
     const [lastClaimedTrigger, setLastClaimedTrigger] = useState<number>(0);
 
@@ -62,6 +63,7 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
                     if (isDifferentUtcDay) {
                         const rawDiff = Math.max(0, p - c);
                         const reward = Math.min(1000, rawDiff);
+                        setRewardPart(reward);
                         setClaimableTotal(500 + reward);
                         setNextClaimTime(null);
                     } else {
@@ -100,6 +102,8 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
             const userAddress = await signer.getAddress();
 
             // 2. Request Signature from Backend (PHP)
+            // We send the CALCULATED TOTAL from frontend to backend.
+            // Backend simply acts as a signer for this amount.
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -125,6 +129,8 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
             // 4. Execute Smart Contract Transaction
             const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
             console.log("Submitting transaction...", { amount });
+            
+            // Send the signed amount to the contract
             const tx = await contract.claim(amount, signature);
             console.log("Transaction sent:", tx.hash);
             await tx.wait(); // Wait for confirmation
@@ -142,13 +148,13 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
                 .single();
             
             const currentClaimed = currentData?.claimed_score || 0;
-            const rewardPart = Math.max(0, claimableTotal - 500); 
+            const currentReward = Math.max(0, claimableTotal - 500); 
             
             await supabase
                 .from('reversi_game_stats')
                 // @ts-ignore
                 .update({ 
-                    claimed_score: currentClaimed + rewardPart,
+                    claimed_score: currentClaimed + currentReward,
                     last_login_bonus: nowIso
                 })
                 .eq('fid', user.fid);
@@ -170,8 +176,6 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
     };
 
     if (!user) return null;
-    
-    // Only render if calculation is ready. 
     if (claimableTotal === null) return null;
 
     // Helper to format countdown
@@ -222,7 +226,10 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
                             Login Bonus (Resets 0:00 UTC)
                         </span>
                         <span className={`text-lg font-black ${canClaim ? 'text-white drop-shadow-sm' : 'text-slate-500'}`}>
-                            {canClaim ? `Claim ${claimableTotal} $CHH` : (nextClaimTime ? getCooldownText() : 'Claimed')}
+                            {canClaim 
+                                ? `Claim 500 + ${rewardPart} $CHH` 
+                                : (nextClaimTime ? getCooldownText() : 'Claimed')
+                            }
                         </span>
                     </div>
                 </div>
