@@ -79,20 +79,36 @@ export const GameMenu = ({ level, setLevel, onStart }: GameMenuProps) => {
                 </button>
             </div>
 
-            <div className="w-full animate-fade-in flex flex-col items-center gap-4 px-2">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Other Apps</span>
-                <a 
-                    href="https://farcaster.xyz/miniapps/7RH3c4fEALgF/runningchihuahua" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="group relative block w-16 h-16 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 ring-4 ring-white"
-                >
-                    <img 
-                        src="https://runningchihuahuaai.k0j1.v2002.coreserver.jp/images/icon.png" 
-                        alt="Running Chihuahua" 
-                        className="w-full h-full object-cover"
-                    />
-                </a>
+            <div className="w-full animate-fade-in flex flex-col items-start gap-4 px-2">
+                <span className="w-full text-left text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Other Apps</span>
+                
+                <div className="flex justify-start gap-4">
+                    <a 
+                        href="https://farcaster.xyz/miniapps/3Si5HSEtMpTX/running-chihuahua" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="group relative block w-16 h-16 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 ring-4 ring-white"
+                    >
+                        <img 
+                            src="https://runningchihuahuaai.k0j1.v2002.coreserver.jp/images/icon.png" 
+                            alt="Running Chihuahua" 
+                            className="w-full h-full object-cover"
+                        />
+                    </a>
+
+                    <a 
+                        href="https://farcaster.xyz/miniapps/MR1ItBAqMlzR/mining-quest" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="group relative block w-16 h-16 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 ring-4 ring-white"
+                    >
+                        <img 
+                            src="https://miningquest.k0j1.v2002.coreserver.jp/images/icon.png" 
+                            alt="Mining Quest" 
+                            className="w-full h-full object-cover"
+                        />
+                    </a>
+                </div>
             </div>
         </div>
     );
