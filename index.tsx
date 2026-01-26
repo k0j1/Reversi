@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Game } from './Game';
@@ -27,8 +28,9 @@ const App = () => {
   // Sync user data to Supabase whenever user or wallet changes
   useUserSync(user, connectedAddress, handleError);
 
-  // Initial DB Connection Test
+  // Initial Setup
   useEffect(() => {
+    // Test DB Connection
     const checkDbConnection = async () => {
       try {
         const { error: dbError } = await supabase
@@ -37,7 +39,6 @@ const App = () => {
         
         if (dbError) {
           console.warn(`DB Connection Warning: ${dbError.message} (${dbError.code})`);
-          // We don't throw or setError here because the app can work offline
         } else {
           console.log("DB Connection Verified");
         }
