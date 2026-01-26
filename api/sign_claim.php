@@ -94,12 +94,14 @@ if (function_exists('bcmul')) {
 // MOCK SIGNATURE (Remove this and implement actual signing with a library)
 // This signature will fail on-chain verification unless the contract signer matches the dummy key.
 $mockSignature = "0x" . bin2hex(random_bytes(65)); 
+$isMock = true; // Signal to frontend that this is not a valid on-chain signature
 
 // Response
 echo json_encode([
     'success' => true,
     'amount' => $amountWei, // String format for BigInt
     'signature' => $mockSignature,
-    'displayAmount' => $amountRaw
+    'displayAmount' => $amountRaw,
+    'isMock' => $isMock
 ]);
 ?>
