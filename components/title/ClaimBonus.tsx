@@ -10,7 +10,7 @@ type ClaimBonusProps = {
 export const ClaimBonus = ({ user }: ClaimBonusProps) => {
     const [loading, setLoading] = useState(false);
     const [claimable, setClaimable] = useState<number | null>(null);
-    const [dbPoints, setDbPoints] = useState(0);
+    // dbPoints removed as it was unused
     const [dbClaimed, setDbClaimed] = useState(0);
     const [lastClaimedTime, setLastClaimedTime] = useState<number>(0);
 
@@ -25,12 +25,16 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
                     .eq('fid', user.fid)
                     .single();
 
+                if (error) {
+                    console.error("Error fetching claim data:", error);
+                    return;
+                }
+
                 if (data) {
                     const p = data.points || 0;
                     // @ts-ignore: claimed_score might not be in the generated types yet
                     const c = data.claimed_score || 0;
                     
-                    setDbPoints(p);
                     setDbClaimed(c);
 
                     // Calculation: (points - claimed_score) + 500
