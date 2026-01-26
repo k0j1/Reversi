@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { FarcasterUser } from '../../types';
@@ -87,7 +86,7 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
 
         try {
             // 1. Get Wallet Provider
-            await sdk.context; // Ensure SDK context is ready
+            await sdk.context; 
             
             // @ts-ignore
             let provider = (sdk as any).wallet?.ethProvider || (window as any).ethereum;
@@ -118,23 +117,21 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
 
             const { amount, signature, displayAmount, isMock } = await response.json();
 
-            // 3. Execute Smart Contract Transaction (OR Mock)
-            let txHash = "0xMock...";
-
+            // 3. Validation
             if (isMock) {
-                // Bypass on-chain transaction if server is in mock mode (no php-web3 lib)
-                console.warn("Mock signature detected. Skipping contract call to prevent revert.");
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
-            } else {
-                const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-                console.log("Submitting transaction...", { amount });
-                const tx = await contract.claim(amount, signature);
-                console.log("Transaction sent:", tx.hash);
-                await tx.wait(); // Wait for confirmation
-                txHash = tx.hash;
+                throw new Error("Server signing is not configured (Mock mode). Cannot perform on-chain claim.");
             }
 
-            // 4. Update UI (Optimistic DB update)
+            // 4. Execute Smart Contract Transaction
+            const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+            console.log("Submitting transaction...", { amount });
+            const tx = await contract.claim(amount, signature);
+            console.log("Transaction sent:", tx.hash);
+            await tx.wait(); // Wait for confirmation
+            
+            const txHash = tx.hash;
+
+            // 5. Update UI (Optimistic DB update)
             const nowIso = new Date().toISOString();
             
             // Re-fetch current DB state to increment properly
@@ -158,11 +155,7 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
 
             setLastClaimedTrigger(Date.now());
             
-            if (isMock) {
-                alert(`Successfully claimed ${displayAmount} $CHH! (Demo Mode - No Gas used)`);
-            } else {
-                alert(`Successfully claimed ${displayAmount} $CHH! (Tx: ${txHash.slice(0, 10)}...)`);
-            }
+            alert(`Successfully claimed ${displayAmount} $CHH! (Tx: ${txHash.slice(0, 10)}...)`);
 
         } catch (e: any) {
             console.error("Claim process failed", e);
