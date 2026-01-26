@@ -87,7 +87,8 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
 
         try {
             // 1. Get Wallet Provider
-            const context = await sdk.context;
+            await sdk.context; // Ensure SDK context is ready, but we don't need the value
+            
             // @ts-ignore
             let provider = (sdk as any).wallet?.ethProvider || (window as any).ethereum;
             
