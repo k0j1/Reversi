@@ -74,8 +74,9 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
                     if (isDifferentUtcDay) {
                         const rawDiff = Math.max(0, p - c);
                         const reward = Math.min(1000, rawDiff);
-                        setRewardPart(reward);
-                        setClaimableTotal(500 + reward);
+                        const total = 500 + reward;
+                        setRewardPart(Math.floor(reward));
+                        setClaimableTotal(Math.floor(total));
                         setNextClaimTime(null);
                     } else {
                         setClaimableTotal(0);
@@ -117,6 +118,9 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
             const signer = await ethersProvider.getSigner();
             const userAddress = await signer.getAddress();
 
+            // Use RAW integer amount (Contract handles 10^18 multiplication)
+            const amountToSend = Math.floor(claimableTotal).toString();
+
             // 2. Request Signature from Backend (PHP)
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
@@ -124,7 +128,7 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
                 body: JSON.stringify({
                     fid: user.fid,
                     address: userAddress,
-                    amount: claimableTotal,
+                    amount: amountToSend, 
                     contractAddress: CONTRACT_ADDRESS
                 })
             });
@@ -154,14 +158,16 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
             const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
             
             // Gas estimation
-            let gasLimit = BigInt(150000);
+            let gasLimit = BigInt(500000); // Set high default buffer
             try {
+                // Estimate with the RAW amount
                 const estimated = await contract.claim.estimateGas(amount, signature);
                 gasLimit = (estimated * 120n) / 100n; // +20% buffer
             } catch (e) {
-                console.warn("Gas estimation failed, using default", e);
+                console.warn("Gas estimation failed, using fallback limit", e);
             }
 
+            // Send transaction with RAW amount
             const tx = await contract.claim(amount, signature, { gasLimit });
             await tx.wait(); // Wait for confirmation
             
