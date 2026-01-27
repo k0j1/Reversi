@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Level, FarcasterUser } from './types';
 import { ProfileButton } from './components/title/ProfileButton';
 import { ProfileModal } from './components/title/ProfileModal';
+import { LightpaperModal } from './components/title/LightpaperModal';
 import { GameMenu } from './components/title/GameMenu';
 import { StatsView } from './components/title/StatsView';
 import { LeaderboardView } from './components/title/LeaderboardView';
@@ -23,6 +24,7 @@ type Tab = 'GAME' | 'STATS' | 'LEADERBOARD';
 export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, connectWallet, onError }: TitleScreenProps) => {
   const [activeTab, setActiveTab] = useState<Tab>('GAME');
   const [showProfile, setShowProfile] = useState(false);
+  const [showLightpaper, setShowLightpaper] = useState(false);
 
   // Auto-connect when profile is opened
   useEffect(() => {
@@ -33,10 +35,24 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
 
   return (
     <div className="flex flex-col h-[100dvh] w-full relative">
-        {/* Profile Button */}
-        <ProfileButton user={user} onClick={() => setShowProfile(true)} />
+        {/* Top Bar Buttons */}
+        <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-50 pointer-events-none">
+            {/* Left: Lightpaper Button */}
+            <button
+                onClick={() => setShowLightpaper(true)}
+                className="pointer-events-auto flex items-center justify-center w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full shadow-sm border border-slate-200 hover:bg-white transition-all active:scale-95 text-xl"
+                aria-label="Open Lightpaper"
+            >
+                📄
+            </button>
+
+            {/* Right: Profile Button Wrapper (ProfileButton handles its own rendering) */}
+            <div className="pointer-events-auto">
+                 <ProfileButton user={user} onClick={() => setShowProfile(true)} />
+            </div>
+        </div>
         
-        {/* Profile Modal */}
+        {/* Modals */}
         {showProfile && (
             <ProfileModal 
                 user={user} 
@@ -44,6 +60,10 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
                 connectWallet={connectWallet} 
                 onClose={() => setShowProfile(false)} 
             />
+        )}
+
+        {showLightpaper && (
+            <LightpaperModal onClose={() => setShowLightpaper(false)} />
         )}
 
         <div className="flex-1 overflow-y-auto w-full">

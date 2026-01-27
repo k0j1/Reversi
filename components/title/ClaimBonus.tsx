@@ -102,8 +102,7 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
             const userAddress = await signer.getAddress();
 
             // 2. Request Signature from Backend (PHP)
-            // We send the CALCULATED TOTAL from frontend to backend.
-            // Backend simply acts as a signer for this amount.
+            // Send the raw integer amount. PHP will sign it as string "500".
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -119,7 +118,14 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
                 throw new Error(err.error || "Server signature failed");
             }
 
-            const { amount, signature, displayAmount, isMock } = await response.json();
+            const { amount, signature, displayAmount, isMock, signerAddress } = await response.json();
+
+            console.log("=== Debug Claim Info ===");
+            console.log("Claim Amount (Raw):", amount);
+            console.log("Backend Signer Address:", signerAddress);
+            console.log("User Address:", userAddress);
+            console.log("Contract Address:", CONTRACT_ADDRESS);
+            console.log("========================");
 
             // 3. Validation
             if (isMock) {
@@ -127,10 +133,10 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
             }
 
             // 4. Execute Smart Contract Transaction
+            // The contract will receive the raw amount (e.g., 500) and the signature for "500".
             const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
             console.log("Submitting transaction...", { amount });
             
-            // Send the signed amount to the contract
             const tx = await contract.claim(amount, signature);
             console.log("Transaction sent:", tx.hash);
             await tx.wait(); // Wait for confirmation
@@ -166,7 +172,7 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
         } catch (e: any) {
             console.error("Claim process failed", e);
             if (e.code === 'CALL_EXCEPTION') {
-                 alert("Claim failed on-chain. The server signature might be invalid or the contract call reverted.");
+                 alert("Claim failed on-chain. This is likely due to an invalid server signature or daily limit.\nPlease check the console for 'Backend Signer Address' and verify it matches the contract owner.");
             } else {
                  alert("Claim failed: " + (e.message || "Unknown error"));
             }

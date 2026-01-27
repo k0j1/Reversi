@@ -1,3 +1,4 @@
+
 import { Level, FarcasterUser } from '../../types';
 import { ClaimBonus } from './ClaimBonus';
 
@@ -61,11 +62,11 @@ export const GameMenu = ({ level, setLevel, onStart, user }: GameMenuProps) => {
                             }}
                         />
                         <div className="flex justify-between text-xs text-slate-400 font-bold mt-3 px-1">
-                            <span>1</span>
-                            <span>2</span>
-                            <span>3</span>
-                            <span>4</span>
-                            <span>5</span>
+                            <span>Beg</span>
+                            <span>Easy</span>
+                            <span>Norm</span>
+                            <span>Hard</span>
+                            <span>Exp</span>
                         </div>
                     </div>
                 </div>

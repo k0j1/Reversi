@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { AppStats, Level, FarcasterUser } from '../../types';
 import { supabase } from '../../lib/supabase';
@@ -87,7 +88,7 @@ export const StatsView = ({ user, onError }: StatsViewProps) => {
                             level_2: INITIAL_LEVEL_STATS,
                             level_3: INITIAL_LEVEL_STATS,
                             level_4: INITIAL_LEVEL_STATS,
-                            level_5: INITIAL_LEVEL_STATS
+                            level_5: INITIAL_LEVEL_STATS,
                         })
                         .eq('fid', user.fid);
                     

@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 import { AppStats, Level, FarcasterUser } from '../types';
 import { supabase } from '../lib/supabase';
@@ -110,7 +111,7 @@ export const useGameStats = (
                                 level_2: stats.levels[2],
                                 level_3: stats.levels[3],
                                 level_4: stats.levels[4],
-                                level_5: stats.levels[5]
+                                level_5: stats.levels[5],
                             });
                         
                         if (error) {

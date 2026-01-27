@@ -1,3 +1,4 @@
+
 import { AppStats, Level, LevelStats } from './types';
 
 export const WIN_MULTIPLIERS: Record<Level, number> = {

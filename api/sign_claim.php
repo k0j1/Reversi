@@ -86,14 +86,17 @@ function dec2hex($number) {
 // 5. Signature Generation
 $isMock = true;
 $signature = "0x00";
-$amountWei = "0";
+$amountToSign = "0";
+$signerAddress = null;
 
 try {
-    // Convert Amount to Wei (10^18)
-    if (function_exists('bcmul')) {
-        $amountWei = bcmul((string)$amountRaw, '1000000000000000000'); 
-    } else {
-        $amountWei = number_format($amountRaw * 1000000000000000000, 0, '', '');
+    // We treat the input amount as the final value to sign.
+    // No multiplication by 10^18 here.
+    $amountToSign = (string)$amountRaw;
+
+    // Validate that it contains only digits
+    if (!ctype_digit($amountToSign)) {
+        throw new Exception("Amount must be a numeric string");
     }
 
     if ($privateKey && class_exists('kornrunner\Keccak') && class_exists('Elliptic\EC')) {
@@ -102,7 +105,7 @@ try {
         $addressHex = strip0x($userAddress);
         $addressBin = hex2bin($addressHex);
         
-        $amountHex = dec2hex($amountWei);
+        $amountHex = dec2hex($amountToSign);
         $amountHex = str_pad($amountHex, 64, '0', STR_PAD_LEFT); // uint256 is 32 bytes
         $amountBin = hex2bin($amountHex);
 
@@ -128,8 +131,14 @@ try {
         $signature = '0x' . $r . $s . $v;
         $isMock = false;
 
+        // For Debugging
+        try {
+            $pubKey = $key->getPublic(false, 'hex');
+            $pubKeyHash = kornrunner\Keccak::hash(hex2bin(substr($pubKey, 2)), 256);
+            $signerAddress = '0x' . substr($pubKeyHash, -40);
+        } catch (Exception $e) {}
+
     } else {
-        // Fallback for dev environment without libraries
         $random = bin2hex(random_bytes(65));
         $signature = "0x" . $random;
         $isMock = true;
@@ -141,9 +150,10 @@ try {
 
 echo json_encode([
     'success' => true,
-    'amount' => $amountWei,
+    'amount' => $amountToSign,
     'signature' => $signature,
     'displayAmount' => $amountRaw,
-    'isMock' => $isMock
+    'isMock' => $isMock,
+    'signerAddress' => $signerAddress 
 ]);
 ?>
