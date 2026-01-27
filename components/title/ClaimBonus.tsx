@@ -14,7 +14,7 @@ const CONTRACT_ABI = [
 ];
 
 // Deployed Contract Address
-const CONTRACT_ADDRESS = "0x23C476eD8710725B06EC33bE3195219aCcfCE0E4";
+const CONTRACT_ADDRESS = "0x38156DB0e482EB3a5C198d49917fdb6746344db1";
 const API_ENDPOINT = "/api/sign_claim.php"; 
 
 type ClaimBonusProps = {
@@ -124,7 +124,8 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
                 body: JSON.stringify({
                     fid: user.fid,
                     address: userAddress,
-                    amount: claimableTotal 
+                    amount: claimableTotal,
+                    contractAddress: CONTRACT_ADDRESS
                 })
             });
 
