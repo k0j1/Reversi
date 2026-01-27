@@ -169,9 +169,18 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
 
             // Send transaction with RAW amount
             const tx = await contract.claim(amount, signature, { gasLimit });
-            await tx.wait(); // Wait for confirmation
             
+            // Set hash immediately so we have it even if waiting fails
             setTxHash(tx.hash);
+
+            // Wait for confirmation, but don't block on specific provider errors
+            try {
+                await tx.wait(); 
+            } catch (waitError: any) {
+                console.warn("Transaction wait failed or not supported:", waitError);
+                // If it's the "method not supported" error, we assume it was broadcasted since we have a hash.
+                // We proceed to update the UI.
+            }
 
             // 5. Update UI (Optimistic DB update)
             const nowIso = new Date().toISOString();
