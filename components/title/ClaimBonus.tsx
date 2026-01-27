@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { FarcasterUser } from '../../types';
@@ -20,18 +21,28 @@ type ClaimBonusProps = {
     user?: FarcasterUser;
 };
 
+type ClaimStep = 'IDLE' | 'SIGNING' | 'SENDING' | 'SUCCESS' | 'ERROR';
+
 export const ClaimBonus = ({ user }: ClaimBonusProps) => {
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false); // General loading for initial fetch
     const [claimableTotal, setClaimableTotal] = useState<number | null>(null);
     const [rewardPart, setRewardPart] = useState<number>(0);
     const [nextClaimTime, setNextClaimTime] = useState<Date | null>(null);
     const [lastClaimedTrigger, setLastClaimedTrigger] = useState<number>(0);
+    
+    // Modal State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [claimStep, setClaimStep] = useState<ClaimStep>('IDLE');
+    const [errorLog, setErrorLog] = useState<string | null>(null);
+    const [txHash, setTxHash] = useState<string | null>(null);
+    const [copySuccess, setCopySuccess] = useState(false);
 
     // Initial check for display (Read-Only)
     useEffect(() => {
         if (!user) return;
 
         const fetchData = async () => {
+            setLoading(true);
             try {
                 const { data, error } = await supabase
                     .from('reversi_game_stats')
@@ -76,6 +87,8 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
                 }
             } catch (e) {
                 console.error("Error fetching claim data", e);
+            } finally {
+                setLoading(false);
             }
         };
 
@@ -84,7 +97,10 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
 
     const handleClaim = async () => {
         if (!user || claimableTotal === null || claimableTotal <= 0) return;
-        setLoading(true);
+        
+        setClaimStep('SIGNING');
+        setErrorLog(null);
+        setTxHash(null);
 
         try {
             // 1. Get Wallet Provider
@@ -94,7 +110,7 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
             let provider = (sdk as any).wallet?.ethProvider || (window as any).ethereum;
             
             if (!provider) {
-                throw new Error("No wallet connected. Please connect your wallet first.");
+                throw new Error("No wallet connected. Please connect your wallet first via the profile menu.");
             }
 
             const ethersProvider = new ethers.BrowserProvider(provider);
@@ -102,7 +118,6 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
             const userAddress = await signer.getAddress();
 
             // 2. Request Signature from Backend (PHP)
-            // Send the raw integer amount. PHP will sign it as string "500".
             const response = await fetch(API_ENDPOINT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -114,39 +129,46 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
             });
 
             if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || "Server signature failed");
+                const text = await response.text();
+                let errMsg = "Server signature failed";
+                try {
+                    const json = JSON.parse(text);
+                    if(json.error) errMsg = json.error;
+                } catch(e) {
+                    errMsg += ": " + text;
+                }
+                throw new Error(errMsg);
             }
 
-            const { amount, signature, displayAmount, isMock, signerAddress } = await response.json();
-
-            console.log("=== Debug Claim Info ===");
-            console.log("Claim Amount (Raw):", amount);
-            console.log("Backend Signer Address:", signerAddress);
-            console.log("User Address:", userAddress);
-            console.log("Contract Address:", CONTRACT_ADDRESS);
-            console.log("========================");
+            const { amount, signature, isMock, signerAddress } = await response.json();
 
             // 3. Validation
             if (isMock) {
-                throw new Error("Server signing is not configured (Mock mode). Cannot perform on-chain claim.");
+                throw new Error(`Server is in Mock Mode.\nSigner: ${signerAddress}\nBackend wallet not configured.`);
             }
 
+            setClaimStep('SENDING');
+
             // 4. Execute Smart Contract Transaction
-            // The contract will receive the raw amount (e.g., 500) and the signature for "500".
             const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-            console.log("Submitting transaction...", { amount });
             
-            const tx = await contract.claim(amount, signature);
-            console.log("Transaction sent:", tx.hash);
+            // Gas estimation
+            let gasLimit = BigInt(150000);
+            try {
+                const estimated = await contract.claim.estimateGas(amount, signature);
+                gasLimit = (estimated * 120n) / 100n; // +20% buffer
+            } catch (e) {
+                console.warn("Gas estimation failed, using default", e);
+            }
+
+            const tx = await contract.claim(amount, signature, { gasLimit });
             await tx.wait(); // Wait for confirmation
             
-            const txHash = tx.hash;
+            setTxHash(tx.hash);
 
             // 5. Update UI (Optimistic DB update)
             const nowIso = new Date().toISOString();
             
-            // Re-fetch current DB state to increment properly
             const { data: currentData } = await supabase
                 .from('reversi_game_stats')
                 .select('claimed_score')
@@ -166,23 +188,46 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
                 .eq('fid', user.fid);
 
             setLastClaimedTrigger(Date.now());
-            
-            alert(`Successfully claimed ${displayAmount} $CHH! (Tx: ${txHash.slice(0, 10)}...)`);
+            setClaimStep('SUCCESS');
 
         } catch (e: any) {
             console.error("Claim process failed", e);
-            if (e.code === 'CALL_EXCEPTION') {
-                 alert("Claim failed on-chain. This is likely due to an invalid server signature or daily limit.\nPlease check the console for 'Backend Signer Address' and verify it matches the contract owner.");
-            } else {
-                 alert("Claim failed: " + (e.message || "Unknown error"));
-            }
-        } finally {
-            setLoading(false);
+            
+            let detailedMsg = e.message || "Unknown error";
+            
+            // Build detailed error log for user
+            if (e.reason) detailedMsg += `\nReason: ${e.reason}`;
+            if (e.code) detailedMsg += `\nCode: ${e.code}`;
+            if (e.data) detailedMsg += `\nData: ${e.data}`;
+            if (e.info) detailedMsg += `\nInfo: ${JSON.stringify(e.info, null, 2)}`;
+            if (e.stack) detailedMsg += `\n\nStack: ${e.stack}`;
+
+            setErrorLog(detailedMsg);
+            setClaimStep('ERROR');
+        }
+    };
+
+    const handleCopyLog = () => {
+        if (errorLog) {
+            navigator.clipboard.writeText(errorLog).then(() => {
+                setCopySuccess(true);
+                setTimeout(() => setCopySuccess(false), 2000);
+            });
+        }
+    };
+
+    const handleClose = () => {
+        setIsModalOpen(false);
+        // Reset state if it was successful or error, so next time it starts fresh (if applicable)
+        if (claimStep === 'SUCCESS' || claimStep === 'ERROR') {
+            setClaimStep('IDLE');
+            setErrorLog(null);
+            setTxHash(null);
         }
     };
 
     if (!user) return null;
-    if (claimableTotal === null) return null;
+    if (claimableTotal === null && !loading) return null;
 
     // Helper to format countdown
     const getCooldownText = () => {
@@ -192,60 +237,158 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
         
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        return `Next: ${hours}h ${minutes}m`;
+        return `${hours}h ${minutes}m`;
     };
 
-    const canClaim = claimableTotal > 0;
+    const canClaim = claimableTotal !== null && claimableTotal > 0;
 
     return (
-        <div className="w-full px-2 animate-fade-in">
-            <button
-                onClick={handleClaim}
-                disabled={loading || !canClaim}
-                className={`
-                    w-full relative overflow-hidden group
-                    py-4 px-6 rounded-2xl border-b-4 transition-all
-                    flex items-center justify-between
-                    ${canClaim 
-                        ? 'bg-gradient-to-r from-yellow-400 to-orange-500 border-orange-600 hover:brightness-110 active:border-b-0 active:translate-y-1' 
-                        : 'bg-slate-200 border-slate-300 cursor-not-allowed text-slate-400'}
-                `}
-            >
-                {/* Shine effect */}
-                {canClaim && (
-                    <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] animate-[shimmer_3s_infinite]"></div>
-                )}
+        <>
+            {/* 1. Simple Title Screen Button */}
+            <div className="w-full px-2 animate-fade-in">
+                <button
+                    onClick={() => canClaim && setIsModalOpen(true)}
+                    disabled={!canClaim}
+                    className={`
+                        w-full py-3 px-6 rounded-xl font-bold shadow-sm transition-all border-b-4 active:border-b-0 active:translate-y-1 flex items-center justify-between
+                        ${canClaim 
+                            ? 'bg-gradient-to-r from-yellow-400 to-orange-500 border-orange-600 text-white hover:brightness-110' 
+                            : 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed'}
+                    `}
+                >
+                    <div className="flex items-center gap-2">
+                        <span className="text-xl">🎁</span>
+                        <span className="uppercase tracking-wider text-sm">
+                            {canClaim ? "Claim Daily Bonus" : "Bonus Claimed"}
+                        </span>
+                    </div>
+                    
+                    <span className="text-sm font-mono bg-black/10 px-2 py-1 rounded">
+                        {canClaim ? "Ready!" : getCooldownText()}
+                    </span>
+                </button>
+            </div>
 
-                <div className="flex items-center gap-3 relative z-10">
-                    <div className={`
-                        w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-sm border-2
-                        ${canClaim ? 'bg-yellow-300 border-yellow-100' : 'bg-slate-300 border-slate-200'}
-                    `}>
-                        {loading ? (
-                            <div className="w-5 h-5 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div>
-                        ) : (
-                            '🎁'
+            {/* 2. Detail / Claim Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={claimStep !== 'SIGNING' && claimStep !== 'SENDING' ? handleClose : undefined}></div>
+                    <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl relative z-10 flex flex-col gap-6 animate-bounce-in border-4 border-slate-100 max-h-[85vh] overflow-y-auto">
+                        
+                        {/* Header */}
+                        <div className="text-center">
+                            <span className="text-4xl">🎁</span>
+                            <h2 className="text-2xl font-black text-slate-800 tracking-tight mt-2">Daily Bonus</h2>
+                            <p className="text-slate-400 font-bold text-sm">Earn $CHH tokens</p>
+                        </div>
+
+                        {/* Breakdown */}
+                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-3">
+                            <div className="flex justify-between items-center text-slate-600 text-sm font-bold">
+                                <span>Base Reward</span>
+                                <span>500 CHH</span>
+                            </div>
+                            <div className="flex justify-between items-center text-slate-600 text-sm font-bold">
+                                <span>Game Performance</span>
+                                <span className="text-orange-500">+{rewardPart} CHH</span>
+                            </div>
+                            <div className="h-px bg-slate-200 w-full my-1"></div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-slate-700 font-black">Total Claim</span>
+                                <span className="text-2xl font-black text-orange-500">{claimableTotal} CHH</span>
+                            </div>
+                        </div>
+
+                        {/* Status / Action Area */}
+                        <div className="space-y-3">
+                            {claimStep === 'IDLE' && (
+                                <button 
+                                    onClick={handleClaim}
+                                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    Claim to Wallet
+                                </button>
+                            )}
+
+                            {(claimStep === 'SIGNING' || claimStep === 'SENDING') && (
+                                <div className="flex flex-col items-center justify-center py-4 gap-3 text-slate-500 font-bold animate-pulse">
+                                    <div className="w-8 h-8 border-4 border-slate-200 border-t-orange-500 rounded-full animate-spin"></div>
+                                    <span>{claimStep === 'SIGNING' ? "Requesting Signature..." : "Confirming Transaction..."}</span>
+                                </div>
+                            )}
+
+                            {claimStep === 'SUCCESS' && (
+                                <div className="text-center space-y-4">
+                                    <div className="bg-green-50 text-green-600 p-4 rounded-xl border border-green-100 font-bold">
+                                        Successfully Claimed!
+                                    </div>
+                                    {txHash && (
+                                        <a 
+                                            href={`https://basescan.org/tx/${txHash}`} 
+                                            target="_blank" 
+                                            rel="noreferrer"
+                                            className="block text-xs text-slate-400 hover:text-orange-500 underline truncate"
+                                        >
+                                            View Tx: {txHash}
+                                        </a>
+                                    )}
+                                    <button 
+                                        onClick={handleClose}
+                                        className="w-full bg-slate-800 text-white font-bold py-3 px-6 rounded-xl"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            )}
+
+                            {claimStep === 'ERROR' && (
+                                <div className="space-y-3">
+                                    <div className="bg-red-50 p-3 rounded-xl border border-red-100 text-left">
+                                        <div className="flex items-center gap-2 text-red-500 font-bold mb-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                            </svg>
+                                            <span>Claim Failed</span>
+                                        </div>
+                                        <div className="bg-white p-2 rounded border border-red-100 max-h-32 overflow-y-auto custom-scrollbar">
+                                            <pre className="text-[10px] font-mono text-slate-600 break-all whitespace-pre-wrap">
+                                                {errorLog}
+                                            </pre>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={handleCopyLog}
+                                            className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${copySuccess ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-600'}`}
+                                        >
+                                            {copySuccess ? "Copied!" : "Copy Log"}
+                                        </button>
+                                        <button 
+                                            onClick={() => setClaimStep('IDLE')}
+                                            className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl"
+                                        >
+                                            Retry
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Close (X) */}
+                        {claimStep !== 'SIGNING' && claimStep !== 'SENDING' && (
+                            <button
+                                onClick={handleClose}
+                                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full transition-colors"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                            </button>
                         )}
                     </div>
-                    <div className="flex flex-col items-start">
-                        <span className={`text-xs font-bold uppercase tracking-wider ${canClaim ? 'text-yellow-100' : 'text-slate-400'}`}>
-                            Login Bonus (Resets 0:00 UTC)
-                        </span>
-                        <span className={`text-lg font-black ${canClaim ? 'text-white drop-shadow-sm' : 'text-slate-500'}`}>
-                            {canClaim 
-                                ? `Claim 500 + ${rewardPart} $CHH` 
-                                : (nextClaimTime ? getCooldownText() : 'Claimed')
-                            }
-                        </span>
-                    </div>
                 </div>
-
-                {canClaim && !loading && (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                )}
-            </button>
-        </div>
+            )}
+        </>
     );
 };
