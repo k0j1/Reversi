@@ -192,6 +192,12 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
 
         } catch (e: any) {
             console.error("Claim process failed", e);
+
+            // Handle User Rejection Gracefully
+            if (e.code === 'ACTION_REJECTED' || e.info?.error?.code === 4001) {
+                setClaimStep('IDLE');
+                return;
+            }
             
             let detailedMsg = e.message || "Unknown error";
             
