@@ -1,9 +1,11 @@
-import { Level, FarcasterUser } from './types';
+
+import { Level, FarcasterUser, BLACK, WHITE } from './types';
 import { useGameLogic } from './hooks/useGameLogic';
 import { Board } from './components/Board';
 import { ScoreBoard } from './components/ScoreBoard';
 import { Toast } from './components/Toast';
 import { WIN_MULTIPLIERS } from './constants';
+import sdk from '@farcaster/frame-sdk';
 
 type GameProps = {
     level: Level;
@@ -41,6 +43,29 @@ export const Game = ({ level, onExit, user, connectedAddress, onError }: GamePro
         case 5: return 'Expert';
         default: return 'Normal';
     }
+  };
+
+  const handleShare = () => {
+    // Generate Emoji Grid
+    const emojiBoard = board.map(row => 
+        row.map(cell => {
+            if (cell === BLACK) return '⚫';
+            if (cell === WHITE) return '⚪';
+            return '🟩'; 
+        }).join('')
+    ).join('\n');
+
+    // Construct Text
+    const resultTitle = isWin ? "🏆 VICTORY!" : isDraw ? "🤝 DRAW" : "💀 DEFEAT";
+    const text = `${resultTitle}\nReversi Pop (Lv.${level})\nScore: ${scores.black} - ${scores.white}\n\n${emojiBoard}\n`;
+
+    // Current URL for embed
+    const embedUrl = window.location.href;
+
+    // Warpcast Compose URL
+    const shareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(embedUrl)}`;
+
+    sdk.actions.openUrl(shareUrl);
   };
 
   return (
@@ -95,12 +120,25 @@ export const Game = ({ level, onExit, user, connectedAddress, onError }: GamePro
                             </div>
                         </div>
 
-                        <button 
-                            onClick={onExit}
-                            className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
-                        >
-                            Back to Title
-                        </button>
+                        <div className="w-full space-y-2">
+                            {/* Share Button */}
+                            <button 
+                                onClick={handleShare}
+                                className="w-full bg-[#855DCD] hover:bg-[#734eb8] text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+                                </svg>
+                                Share on Warpcast
+                            </button>
+
+                            <button 
+                                onClick={onExit}
+                                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                Back to Title
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
