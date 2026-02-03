@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { AppStats, Level, FarcasterUser } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { INITIAL_STATS, INITIAL_LEVEL_STATS } from '../../constants';
+import sdk from '@farcaster/frame-sdk';
 
 const STORAGE_KEY = 'reversi_stats';
 const OLD_STORAGE_KEY = 'reversi_pop_stats';
@@ -128,10 +129,42 @@ export const StatsView = ({ user, onError }: StatsViewProps) => {
         }
     };
 
+    const handleShare = () => {
+        if (!stats) return;
+
+        const totalGames = stats.total.win + stats.total.loss + stats.total.draw;
+        const winRate = totalGames > 0 ? Math.round((stats.total.win / totalGames) * 100) : 0;
+
+        let text = `📊 My Reversi Stats\n\n` +
+                     `Points: ${stats.points.toLocaleString()}\n` +
+                     `Total: ${stats.total.win}W ${stats.total.loss}L ${stats.total.draw}D (${winRate}%)\n\n`;
+
+        // Add Level Breakdown
+        let hasLevelStats = false;
+        ([1, 2, 3, 4, 5] as Level[]).forEach((lvl) => {
+            const data = stats.levels[lvl];
+            const count = data.win + data.loss + data.draw;
+            
+            if (count > 0) {
+                text += `Lv.${lvl}: ${data.win}W ${data.loss}L ${data.draw}D\n`;
+                hasLevelStats = true;
+            }
+        });
+
+        if (!hasLevelStats) {
+            text += "No games played yet.\n";
+        }
+
+        const embedUrl = window.location.href;
+        const shareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(embedUrl)}`;
+
+        sdk.actions.openUrl(shareUrl);
+    };
+
     if (!stats) return <div className="p-8 text-center text-slate-400">Loading...</div>;
 
     return (
-        <div className="w-full space-y-4 animate-fade-in">
+        <div className="w-full space-y-4 animate-fade-in pb-4">
             <h2 className="text-2xl font-bold text-slate-700 text-center mb-4">Your Records</h2>
             
             {/* Total Score & Points Card */}
@@ -208,12 +241,24 @@ export const StatsView = ({ user, onError }: StatsViewProps) => {
                 );
             })}
             
-            <button 
-                onClick={handleReset}
-                className="w-full mt-4 py-2 text-slate-400 text-sm font-bold hover:text-red-500 transition-colors"
-            >
-                Reset Records
-            </button>
+            <div className="pt-4 flex flex-col gap-3">
+                <button 
+                    onClick={handleShare}
+                    className="w-full bg-[#855DCD] hover:bg-[#734eb8] text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+                    </svg>
+                    Share Stats
+                </button>
+
+                <button 
+                    onClick={handleReset}
+                    className="w-full py-2 text-slate-400 text-sm font-bold hover:text-red-500 transition-colors"
+                >
+                    Reset Records
+                </button>
+            </div>
         </div>
     );
 };
