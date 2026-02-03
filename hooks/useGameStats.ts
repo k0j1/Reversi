@@ -4,6 +4,9 @@ import { AppStats, Level, FarcasterUser } from '../types';
 import { supabase } from '../lib/supabase';
 import { INITIAL_STATS, INITIAL_LEVEL_STATS, WIN_MULTIPLIERS } from '../constants';
 
+const STORAGE_KEY = 'reversi_stats';
+const OLD_STORAGE_KEY = 'reversi_pop_stats';
+
 export const useGameStats = (
     gameOver: boolean, 
     level: Level, 
@@ -53,7 +56,16 @@ export const useGameStats = (
                             });
                         }
                     } else {
-                        const stored = localStorage.getItem('reversi_pop_stats');
+                        // LocalStorage Migration Check
+                        let stored = localStorage.getItem(STORAGE_KEY);
+                        if (!stored) {
+                            stored = localStorage.getItem(OLD_STORAGE_KEY);
+                            if (stored) {
+                                localStorage.setItem(STORAGE_KEY, stored);
+                                localStorage.removeItem(OLD_STORAGE_KEY);
+                            }
+                        }
+
                         if (stored) {
                             const parsed = JSON.parse(stored);
                             stats.points = parsed.points || 0;
@@ -123,7 +135,7 @@ export const useGameStats = (
                             onShowToast("Records Saved Successfully!", 'info');
                         }
                     } else {
-                        localStorage.setItem('reversi_pop_stats', JSON.stringify(stats));
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
                         console.log(`Game Saved (Local): Earned ${pointsEarned} pts. Total: ${stats.points}`);
                         onShowToast("Game Saved (Local)", 'info');
                     }

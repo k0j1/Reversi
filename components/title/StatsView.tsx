@@ -4,6 +4,9 @@ import { AppStats, Level, FarcasterUser } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { INITIAL_STATS, INITIAL_LEVEL_STATS } from '../../constants';
 
+const STORAGE_KEY = 'reversi_stats';
+const OLD_STORAGE_KEY = 'reversi_pop_stats';
+
 type StatsViewProps = {
     user?: FarcasterUser;
     onError: (error: any) => void;
@@ -47,7 +50,15 @@ export const StatsView = ({ user, onError }: StatsViewProps) => {
                 }
                 
                 if (!found) {
-                    const data = localStorage.getItem('reversi_pop_stats');
+                    let data = localStorage.getItem(STORAGE_KEY);
+                    if (!data) {
+                        data = localStorage.getItem(OLD_STORAGE_KEY);
+                        if (data) {
+                            localStorage.setItem(STORAGE_KEY, data);
+                            localStorage.removeItem(OLD_STORAGE_KEY);
+                        }
+                    }
+
                     if (data) {
                         const parsed = JSON.parse(data);
                         if (parsed.levels) {
@@ -95,7 +106,8 @@ export const StatsView = ({ user, onError }: StatsViewProps) => {
                     if (error) throw error;
                 }
                 
-                localStorage.removeItem('reversi_pop_stats');
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem(OLD_STORAGE_KEY);
                 setStats(JSON.parse(JSON.stringify(INITIAL_STATS)));
                 
             } catch (e) {
