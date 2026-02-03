@@ -57,13 +57,14 @@ export const Game = ({ level, onExit, user, connectedAddress, onError }: GamePro
 
     // Construct Text
     const resultTitle = isWin ? "🏆 VICTORY!" : isDraw ? "🤝 DRAW" : "💀 DEFEAT";
-    const text = `${resultTitle}\nReversi Pop (Lv.${level})\nScore: ${scores.black} - ${scores.white}\n\n${emojiBoard}\n`;
+    const text = `${resultTitle}\nReversi (Lv.${level})\nScore: ${scores.black} - ${scores.white}\n\n${emojiBoard}\n`;
 
-    // Current URL for embed
+    // Current URL and Icon Image for embed
     const embedUrl = window.location.href;
+    const iconUrl = 'https://reversi.k0j1.v2002.coreserver.jp/images/icon.png';
 
-    // Warpcast Compose URL
-    const shareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(embedUrl)}`;
+    // Warpcast Compose URL with multiple embeds
+    const shareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(embedUrl)}&embeds[]=${encodeURIComponent(iconUrl)}`;
 
     sdk.actions.openUrl(shareUrl);
   };

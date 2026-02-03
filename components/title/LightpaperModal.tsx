@@ -22,7 +22,7 @@ const CONTENT = {
         carryOverNote: "Points exceeding the 1,000 cap are CARRIED OVER to the next day. They are not lost!",
         maxDaily: "Max Daily Total",
         aboutTitle: "About $CHH",
-        aboutDesc: "$CHH (Chihuahua) is a community token on the Base network. Play Reversi Pop, accumulate points, and claim your daily allowance to join the ecosystem!",
+        aboutDesc: "$CHH (Chihuahua) is a community token on the Base network. Play Reversi, accumulate points, and claim your daily allowance to join the ecosystem!",
         close: "Close Lightpaper"
     },
     jp: {
@@ -43,7 +43,7 @@ const CONTENT = {
         carryOverNote: "上限（1,000pt）を超えたポイントは翌日以降に持ち越されます。ポイントが無駄になることはありません！",
         maxDaily: "1日の最大獲得量",
         aboutTitle: "$CHHについて",
-        aboutDesc: "$CHH (Chihuahua) はBaseネットワーク上のコミュニティトークンです。Reversi Popをプレイしてポイントを貯め、エコシステムに参加しましょう！",
+        aboutDesc: "$CHH (Chihuahua) はBaseネットワーク上のコミュニティトークンです。Reversiをプレイしてポイントを貯め、エコシステムに参加しましょう！",
         close: "閉じる"
     }
 };
