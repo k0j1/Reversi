@@ -8,56 +8,71 @@ type AdminModalProps = {
     onClose: () => void;
 };
 
-// Minimal ERC20 ABI for transfer
-const ERC20_ABI = [
-    "function transfer(address to, uint256 amount) external returns (bool)",
-    "function decimals() view returns (uint8)",
-    "function symbol() view returns (string)"
-];
-
 export const AdminModal = ({ onClose }: AdminModalProps) => {
     const [balance, setBalance] = useState<string>('Loading...');
-    
-    // Deposit Form State
-    const [tokenAddress, setTokenAddress] = useState('');
-    const [amount, setAmount] = useState('');
     const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'SUCCESS' | 'ERROR'>('IDLE');
     const [statusMsg, setStatusMsg] = useState('');
+    
+    // Stats State
+    const [totalClaims, setTotalClaims] = useState<number | string>('Loading...');
+    const [totalDistributed, setTotalDistributed] = useState<string>('Loading...');
 
     useEffect(() => {
-        const fetchContractBalance = async () => {
+        const fetchContractData = async () => {
             try {
                 // Read-only provider (Base Mainnet)
                 const provider = new ethers.JsonRpcProvider("https://mainnet.base.org");
                 const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
                 
-                // Fetch balance
-                const bal = await contract.getRemainingBalance();
-                // Assuming contract handles 18 decimals internally for CHH
-                const formatted = ethers.formatUnits(bal, 18);
-                setBalance(`${parseFloat(formatted).toLocaleString()} CHH`);
+                // 1. Fetch Balance
+                try {
+                    const bal = await contract.getRemainingBalance();
+                    const formatted = ethers.formatUnits(bal, 18);
+                    setBalance(`${parseFloat(formatted).toLocaleString()} CHH`);
+                } catch (e) {
+                    console.error("Balance fetch failed", e);
+                    setBalance("Error");
+                }
+
+                // 2. Fetch Event Logs for Statistics
+                // Note: Public RPCs might limit block ranges. If history is long, this might need pagination.
+                try {
+                    const filter = contract.filters.Claimed();
+                    const events = await contract.queryFilter(filter);
+                    
+                    setTotalClaims(events.length);
+
+                    let totalDist = BigInt(0);
+                    events.forEach((event: any) => {
+                        if (event.args && event.args[1]) {
+                            totalDist += event.args[1];
+                        }
+                    });
+                    
+                    const distFormatted = ethers.formatUnits(totalDist, 18);
+                    setTotalDistributed(`${parseFloat(distFormatted).toLocaleString()} CHH`);
+
+                } catch (e) {
+                    console.error("Events fetch failed", e);
+                    setTotalClaims("N/A (RPC Limit)");
+                    setTotalDistributed("N/A");
+                }
+
             } catch (e: any) {
-                console.error("Failed to fetch balance", e);
-                setBalance("Error fetching balance");
+                console.error("Provider error", e);
             }
         };
 
-        fetchContractBalance();
+        fetchContractData();
     }, []);
 
     const handleCopyAddress = () => {
         navigator.clipboard.writeText(CONTRACT_ADDRESS);
     };
 
-    const handleDeposit = async () => {
-        if (!tokenAddress || !amount) {
-            setStatus('ERROR');
-            setStatusMsg("Please fill in Token Address and Amount");
-            return;
-        }
-
+    const handleSend = async () => {
         setStatus('PROCESSING');
-        setStatusMsg("Initializing transaction...");
+        setStatusMsg("Opening wallet...");
 
         try {
             await sdk.context;
@@ -68,40 +83,36 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
                 throw new Error("No wallet connected.");
             }
 
-            const ethersProvider = new ethers.BrowserProvider(provider);
-            const signer = await ethersProvider.getSigner();
-            
-            const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-            
-            // Get decimals to format correctly
-            let decimals = 18;
-            try {
-                decimals = await tokenContract.decimals();
-            } catch (e) {
-                console.warn("Could not fetch decimals, defaulting to 18");
-            }
-
-            const parsedAmount = ethers.parseUnits(amount, decimals);
-
-            setStatusMsg("Please confirm transfer in your wallet...");
-            
-            const tx = await tokenContract.transfer(CONTRACT_ADDRESS, parsedAmount);
-            setStatusMsg(`Transaction sent! Hash: ${tx.hash}`);
-            
-            await tx.wait();
+            // Request a transaction to the contract address.
+            // We do not specify value or data, letting the user control this in their wallet.
+            // This will typically open the "Send" screen with the 'to' address pre-filled.
+            await provider.request({
+                method: 'eth_sendTransaction',
+                params: [
+                    {
+                        to: CONTRACT_ADDRESS,
+                        // value: '0x0', // Optional: can be omitted to let user choose
+                        from: (await provider.request({ method: 'eth_requestAccounts' }))[0]
+                    },
+                ],
+            });
             
             setStatus('SUCCESS');
-            setStatusMsg("Deposit successful!");
+            setStatusMsg("Check your wallet to confirm.");
             
-            // Refresh balance after short delay
-            setTimeout(() => {
-                // Trigger re-fetch logic if needed, or just let user close/reopen
-            }, 2000);
-
         } catch (e: any) {
             console.error(e);
             setStatus('ERROR');
-            setStatusMsg(e.message || "Transaction failed");
+            // User rejected or other error
+            setStatusMsg(e.message?.includes("rejected") ? "Cancelled" : "Failed to open wallet");
+        } finally {
+            // Reset status after a delay if success/error
+            if (status !== 'PROCESSING') {
+                setTimeout(() => {
+                     setStatus('IDLE');
+                     setStatusMsg('');
+                }, 3000);
+            }
         }
     };
 
@@ -139,26 +150,28 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
                     </div>
                 </div>
 
-                {/* Deposit Tool */}
+                {/* Statistics Section */}
+                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 space-y-3">
+                    <h3 className="text-xs font-bold text-orange-400 uppercase tracking-wider">Historical Stats</h3>
+                    
+                    <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-slate-600">Total Claims</span>
+                        <span className="font-black text-slate-800">{totalClaims}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center border-t border-orange-200/50 pt-2">
+                        <span className="text-xs font-bold text-slate-600">Total Distributed</span>
+                        <span className="font-black text-slate-800">{totalDistributed}</span>
+                    </div>
+                </div>
+
+                {/* Fund Tool */}
                 <div className="space-y-3 pt-2">
                     <h3 className="text-sm font-bold text-slate-700">Fund Contract</h3>
                     
-                    <div className="space-y-2">
-                        <input 
-                            type="text" 
-                            placeholder="Token Address (e.g. 0x...)"
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-mono outline-none focus:border-orange-400"
-                            value={tokenAddress}
-                            onChange={(e) => setTokenAddress(e.target.value)}
-                        />
-                        <input 
-                            type="number" 
-                            placeholder="Amount to Send"
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:border-orange-400"
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                        />
-                    </div>
+                    <p className="text-xs text-slate-500 font-medium">
+                        Click the button below to open your wallet and send tokens/ETH to the contract address.
+                    </p>
 
                     {status !== 'IDLE' && (
                          <div className={`text-xs p-2 rounded-lg font-bold break-all ${status === 'ERROR' ? 'bg-red-50 text-red-500' : status === 'SUCCESS' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-500'}`}>
@@ -167,11 +180,10 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
                     )}
 
                     <button 
-                        onClick={handleDeposit}
-                        disabled={status === 'PROCESSING'}
-                        className={`w-full py-3 rounded-xl font-bold text-white transition-all ${status === 'PROCESSING' ? 'bg-slate-400' : 'bg-slate-800 hover:bg-slate-700 shadow-lg active:scale-95'}`}
+                        onClick={handleSend}
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
                     >
-                        {status === 'PROCESSING' ? 'Processing...' : 'Send to Contract'}
+                        <span>💸</span> Send to Contract
                     </button>
                 </div>
             </div>
