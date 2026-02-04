@@ -43,9 +43,9 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
         try {
             // Invoke Farcaster native send token screen
             // Documentation: https://miniapps.farcaster.xyz/docs/sdk/actions/send-token
-            // @ts-ignore: sendToken might be missing in current type definitions
+            // @ts-ignore: sendToken definition might vary in SDK version
             await sdk.actions.sendToken({
-                chain: 'eip155:8453', // Base Mainnet Chain ID
+                chainId: 'eip155:8453', // Base Mainnet Chain ID (Fixed property name)
                 to: CONTRACT_ADDRESS,
                 // omitting 'token' implies Native ETH
                 // omitting 'amount' allows user to input amount in wallet
