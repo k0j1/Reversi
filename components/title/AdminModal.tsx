@@ -12,65 +12,24 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
     const [balance, setBalance] = useState<string>('Loading...');
     const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'SUCCESS' | 'ERROR'>('IDLE');
     const [statusMsg, setStatusMsg] = useState('');
-    
-    // Stats State
-    const [totalClaims, setTotalClaims] = useState<number | string>('Loading...');
-    const [totalDistributed, setTotalDistributed] = useState<string>('Loading...');
 
     useEffect(() => {
-        const fetchContractData = async () => {
+        const fetchBalance = async () => {
             try {
                 // Read-only provider (Base Mainnet)
                 const provider = new ethers.JsonRpcProvider("https://mainnet.base.org");
                 const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
                 
-                // 1. Fetch Balance
-                try {
-                    const bal = await contract.getRemainingBalance();
-                    const formatted = ethers.formatUnits(bal, 18);
-                    setBalance(`${parseFloat(formatted).toLocaleString()} CHH`);
-                } catch (e) {
-                    console.error("Balance fetch failed", e);
-                    setBalance("Error");
-                }
-
-                // 2. Fetch Event Logs for Statistics
-                // We attempt to fetch from the earliest block. 
-                // Note: Public RPCs may fail if the range is too large.
-                try {
-                    const filter = contract.filters.Claimed();
-                    // Attempt to fetch all logs. If this fails due to RPC limits, we might need a tighter range.
-                    // Using a recent-ish block number as 'from' might be safer if we knew deployment time, 
-                    // but for now we try 'earliest' or 0. 
-                    // If this throws, we catch it.
-                    const events = await contract.queryFilter(filter, 0, 'latest');
-                    
-                    setTotalClaims(events.length);
-
-                    let totalDist = BigInt(0);
-                    for (const event of events) {
-                        // Check if event is EventLog (has args)
-                        if ('args' in event && event.args) {
-                            // args[1] corresponds to 'amount' in: event Claimed(address indexed user, uint256 amount)
-                            totalDist += BigInt(event.args[1]);
-                        }
-                    }
-                    
-                    const distFormatted = ethers.formatUnits(totalDist, 18);
-                    setTotalDistributed(`${parseFloat(distFormatted).toLocaleString()} CHH`);
-
-                } catch (e) {
-                    console.error("Events fetch failed (likely RPC limit)", e);
-                    setTotalClaims("N/A (RPC Limit)");
-                    setTotalDistributed("N/A");
-                }
-
-            } catch (e: any) {
-                console.error("Provider error", e);
+                const bal = await contract.getRemainingBalance();
+                const formatted = ethers.formatUnits(bal, 18);
+                setBalance(`${parseFloat(formatted).toLocaleString()} CHH`);
+            } catch (e) {
+                console.error("Balance fetch failed", e);
+                setBalance("Error");
             }
         };
 
-        fetchContractData();
+        fetchBalance();
     }, []);
 
     const handleCopyAddress = () => {
@@ -90,19 +49,19 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
                 throw new Error("No wallet connected.");
             }
 
-            // Get connected account
             const accounts = await provider.request({ method: 'eth_requestAccounts' });
             const fromAddress = accounts[0];
 
-            // Request a transaction to the contract address.
-            // We do not specify value or data, letting the user control this in their wallet.
-            // This will typically open the "Send" screen with the 'to' address pre-filled.
+            // Send transaction (opens wallet for user to confirm and enter amount if supported, or just send 0)
+            // Note: 'value' is omitted to let standard wallet UI handle amount input if possible,
+            // or default to 0. 
             await provider.request({
                 method: 'eth_sendTransaction',
                 params: [
                     {
                         to: CONTRACT_ADDRESS,
-                        from: fromAddress
+                        from: fromAddress,
+                        data: "0x" 
                     },
                 ],
             });
@@ -113,10 +72,8 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
         } catch (e: any) {
             console.error(e);
             setStatus('ERROR');
-            // User rejected or other error
             setStatusMsg(e.message?.includes("rejected") ? "Cancelled" : "Failed to open wallet");
         } finally {
-            // Reset status after a delay if success/error
             if (status !== 'PROCESSING') {
                 setTimeout(() => {
                      setStatus('IDLE');
@@ -157,21 +114,6 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
                     <div className="flex justify-between items-center border-t border-slate-200 pt-3">
                         <label className="text-xs font-bold text-slate-400 uppercase">Remaining Pool</label>
                         <span className="font-black text-slate-800">{balance}</span>
-                    </div>
-                </div>
-
-                {/* Statistics Section */}
-                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 space-y-3">
-                    <h3 className="text-xs font-bold text-orange-400 uppercase tracking-wider">Historical Stats</h3>
-                    
-                    <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-slate-600">Total Claims</span>
-                        <span className="font-black text-slate-800">{totalClaims}</span>
-                    </div>
-
-                    <div className="flex justify-between items-center border-t border-orange-200/50 pt-2">
-                        <span className="text-xs font-bold text-slate-600">Total Distributed</span>
-                        <span className="font-black text-slate-800">{totalDistributed}</span>
                     </div>
                 </div>
 
