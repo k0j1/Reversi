@@ -41,29 +41,14 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
         setStatusMsg("Opening wallet...");
 
         try {
-            await sdk.context;
-            // @ts-ignore
-            let provider = (sdk as any).wallet?.ethProvider || (window as any).ethereum;
-            
-            if (!provider) {
-                throw new Error("No wallet connected.");
-            }
-
-            const accounts = await provider.request({ method: 'eth_requestAccounts' });
-            const fromAddress = accounts[0];
-
-            // Send transaction (opens wallet for user to confirm and enter amount if supported, or just send 0)
-            // Note: 'value' is omitted to let standard wallet UI handle amount input if possible,
-            // or default to 0. 
-            await provider.request({
-                method: 'eth_sendTransaction',
-                params: [
-                    {
-                        to: CONTRACT_ADDRESS,
-                        from: fromAddress,
-                        data: "0x" 
-                    },
-                ],
+            // Invoke Farcaster native send token screen
+            // Documentation: https://miniapps.farcaster.xyz/docs/sdk/actions/send-token
+            // @ts-ignore: sendToken might be missing in current type definitions
+            await sdk.actions.sendToken({
+                chain: 'eip155:8453', // Base Mainnet Chain ID
+                to: CONTRACT_ADDRESS,
+                // omitting 'token' implies Native ETH
+                // omitting 'amount' allows user to input amount in wallet
             });
             
             setStatus('SUCCESS');
@@ -72,7 +57,7 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
         } catch (e: any) {
             console.error(e);
             setStatus('ERROR');
-            setStatusMsg(e.message?.includes("rejected") ? "Cancelled" : "Failed to open wallet");
+            setStatusMsg("Action cancelled or failed");
         } finally {
             if (status !== 'PROCESSING') {
                 setTimeout(() => {
