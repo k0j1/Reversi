@@ -6,7 +6,7 @@ import { ethers } from 'ethers';
 import sdk from '@farcaster/frame-sdk';
 
 // Contract ABI
-const CONTRACT_ABI = [
+export const CONTRACT_ABI = [
   "function claim(uint256 amount, bytes signature) external",
   "function getRemainingBalance() external view returns (uint256)",
   "function checkDailyLimit(address user) external view returns (bool)",
@@ -14,7 +14,7 @@ const CONTRACT_ABI = [
 ];
 
 // Deployed Contract Address
-const CONTRACT_ADDRESS = "0x38156DB0e482EB3a5C198d49917fdb6746344db1";
+export const CONTRACT_ADDRESS = "0x38156DB0e482EB3a5C198d49917fdb6746344db1";
 const API_ENDPOINT = "/api/sign_claim.php"; 
 
 type ClaimBonusProps = {
