@@ -25,12 +25,15 @@ export const StatsView = ({ user, onError }: StatsViewProps) => {
                 if (user) {
                     const { data, error } = await supabase
                         .from('reversi_game_stats')
-                        .select('points, level_1, level_2, level_3, level_4, level_5')
+                        .select('points, claimed_score, level_1, level_2, level_3, level_4, level_5')
                         .eq('fid', user.fid)
                         .single();
                     
                     if (data) {
                         loadedStats.points = data.points || 0;
+                        // @ts-ignore
+                        loadedStats.claimedScore = data.claimed_score || 0;
+                        
                         loadedStats.levels[1] = data.level_1 || { ...INITIAL_LEVEL_STATS };
                         loadedStats.levels[2] = data.level_2 || { ...INITIAL_LEVEL_STATS };
                         loadedStats.levels[3] = data.level_3 || { ...INITIAL_LEVEL_STATS };
@@ -73,6 +76,7 @@ export const StatsView = ({ user, onError }: StatsViewProps) => {
                                 loadedStats.total.draw += lvlStats.draw || 0;
                             });
                             loadedStats.points = parsed.points || 0;
+                            loadedStats.claimedScore = parsed.claimedScore || 0;
                         }
                     }
                 }
@@ -170,9 +174,18 @@ export const StatsView = ({ user, onError }: StatsViewProps) => {
             {/* Total Score & Points Card */}
             <div className="bg-gradient-to-br from-slate-800 to-slate-700 p-6 rounded-[2rem] shadow-lg text-white mb-6 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                <div className="relative z-10 flex flex-col items-center gap-2">
+                <div className="relative z-10 flex flex-col items-center gap-1">
                     <span className="text-slate-300 text-sm font-bold uppercase tracking-wider">Total Points</span>
-                    <span className="text-5xl font-black text-yellow-400 drop-shadow-md">{stats.points.toLocaleString()}</span>
+                    <span className="text-5xl font-black text-yellow-400 drop-shadow-md mb-1">{stats.points.toLocaleString()}</span>
+                    
+                    {/* Claimed Points Badge */}
+                    <div className="flex items-center gap-2 bg-black/20 px-3 py-1 rounded-full border border-white/5 mb-2">
+                        <span className="text-slate-400 text-[10px] font-bold uppercase">Claimed</span>
+                        <span className="text-orange-200 text-xs font-bold font-mono">
+                            {(stats.claimedScore || 0).toLocaleString()}
+                        </span>
+                    </div>
+
                     <div className="h-px w-full bg-white/10 my-2"></div>
                     <div className="flex justify-between w-full px-4 text-sm font-bold">
                         <div className="flex flex-col items-center">

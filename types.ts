@@ -17,6 +17,7 @@ export type AppStats = {
     levels: Record<Level, LevelStats>;
     total: LevelStats;
     points: number;
+    claimedScore?: number;
 };
 
 export type FarcasterUser = {

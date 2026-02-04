@@ -20,5 +20,6 @@ export const INITIAL_STATS: AppStats = {
         5: { ...INITIAL_LEVEL_STATS },
     },
     total: { ...INITIAL_LEVEL_STATS },
-    points: 0
+    points: 0,
+    claimedScore: 0
 };
