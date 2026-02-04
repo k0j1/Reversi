@@ -8,6 +8,9 @@ type AdminModalProps = {
     onClose: () => void;
 };
 
+// CHH Token Contract Address on Base Mainnet
+const CHH_TOKEN_ADDRESS = "0xb0525542E3D818460546332e76E511562dFf9B07";
+
 export const AdminModal = ({ onClose }: AdminModalProps) => {
     const [balance, setBalance] = useState<string>('Loading...');
     const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'SUCCESS' | 'ERROR'>('IDLE');
@@ -47,7 +50,10 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
             await sdk.actions.sendToken({
                 chain: 'eip155:8453', // Base Mainnet
                 to: CONTRACT_ADDRESS,
-                // omitting 'token' implies Native ETH
+                token: {
+                    chainId: 'eip155:8453',
+                    address: CHH_TOKEN_ADDRESS
+                }
                 // omitting 'amount' allows user to input amount in wallet
             } as any);
             
@@ -107,9 +113,9 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
                     <h3 className="text-sm font-bold text-slate-700">Fund Contract</h3>
                     
                     <p className="text-xs text-slate-500 font-medium">
-                        Click the button below to open your wallet and send tokens/ETH to the contract address.
+                        Click the button below to open your wallet and send CHH tokens to the contract address.
                     </p>
-
+                    
                     {status !== 'IDLE' && (
                          <div className={`text-xs p-2 rounded-lg font-bold break-all ${status === 'ERROR' ? 'bg-red-50 text-red-500' : status === 'SUCCESS' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-500'}`}>
                             {statusMsg}
@@ -120,7 +126,7 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
                         onClick={handleSend}
                         className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
                     >
-                        <span>💸</span> Send to Contract
+                        <span>💸</span> Send CHH
                     </button>
                 </div>
             </div>
