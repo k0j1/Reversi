@@ -46,15 +46,15 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
         try {
             // Invoke Farcaster native send token screen
             // Documentation: https://miniapps.farcaster.xyz/docs/sdk/actions/send-token
-            // Fix: Use 'chain' instead of 'chainId' inside token object
+            // Fix: Reverted 'chain' to 'chainId' inside token object and added amount
             await sdk.actions.sendToken({
                 chain: 'eip155:8453', // Base Mainnet
                 to: CONTRACT_ADDRESS,
                 token: {
-                    chain: 'eip155:8453',
+                    chainId: 'eip155:8453',
                     address: CHH_TOKEN_ADDRESS
-                }
-                // omitting 'amount' allows user to input amount in wallet
+                },
+                amount: "100000000000000000000" // 100 CHH (Default amount)
             } as any);
             
             setStatus('SUCCESS');
@@ -113,7 +113,7 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
                     <h3 className="text-sm font-bold text-slate-700">Fund Contract</h3>
                     
                     <p className="text-xs text-slate-500 font-medium">
-                        Click the button below to open your wallet and send CHH tokens to the contract address.
+                        Click the button below to open your wallet and send CHH tokens to the contract address. (Default: 100 CHH)
                     </p>
                     
                     {status !== 'IDLE' && (
