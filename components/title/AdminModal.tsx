@@ -17,7 +17,6 @@ const ERC20_ABI = [
 
 export const AdminModal = ({ onClose }: AdminModalProps) => {
     const [balance, setBalance] = useState<string>('Loading...');
-    const [loading, setLoading] = useState(false);
     
     // Deposit Form State
     const [tokenAddress, setTokenAddress] = useState('');
