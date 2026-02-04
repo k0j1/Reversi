@@ -35,25 +35,32 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
                 }
 
                 // 2. Fetch Event Logs for Statistics
-                // Note: Public RPCs might limit block ranges. If history is long, this might need pagination.
+                // We attempt to fetch from the earliest block. 
+                // Note: Public RPCs may fail if the range is too large.
                 try {
                     const filter = contract.filters.Claimed();
-                    const events = await contract.queryFilter(filter);
+                    // Attempt to fetch all logs. If this fails due to RPC limits, we might need a tighter range.
+                    // Using a recent-ish block number as 'from' might be safer if we knew deployment time, 
+                    // but for now we try 'earliest' or 0. 
+                    // If this throws, we catch it.
+                    const events = await contract.queryFilter(filter, 0, 'latest');
                     
                     setTotalClaims(events.length);
 
                     let totalDist = BigInt(0);
-                    events.forEach((event: any) => {
-                        if (event.args && event.args[1]) {
-                            totalDist += event.args[1];
+                    for (const event of events) {
+                        // Check if event is EventLog (has args)
+                        if ('args' in event && event.args) {
+                            // args[1] corresponds to 'amount' in: event Claimed(address indexed user, uint256 amount)
+                            totalDist += BigInt(event.args[1]);
                         }
-                    });
+                    }
                     
                     const distFormatted = ethers.formatUnits(totalDist, 18);
                     setTotalDistributed(`${parseFloat(distFormatted).toLocaleString()} CHH`);
 
                 } catch (e) {
-                    console.error("Events fetch failed", e);
+                    console.error("Events fetch failed (likely RPC limit)", e);
                     setTotalClaims("N/A (RPC Limit)");
                     setTotalDistributed("N/A");
                 }
@@ -83,6 +90,10 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
                 throw new Error("No wallet connected.");
             }
 
+            // Get connected account
+            const accounts = await provider.request({ method: 'eth_requestAccounts' });
+            const fromAddress = accounts[0];
+
             // Request a transaction to the contract address.
             // We do not specify value or data, letting the user control this in their wallet.
             // This will typically open the "Send" screen with the 'to' address pre-filled.
@@ -91,8 +102,7 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
                 params: [
                     {
                         to: CONTRACT_ADDRESS,
-                        // value: '0x0', // Optional: can be omitted to let user choose
-                        from: (await provider.request({ method: 'eth_requestAccounts' }))[0]
+                        from: fromAddress
                     },
                 ],
             });
