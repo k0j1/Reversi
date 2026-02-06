@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Game } from './Game';
 import { TitleScreen } from './TitleScreen';
+import { MaintenanceScreen } from './components/MaintenanceScreen';
 import { Level } from './types';
 import { useFarcaster } from './hooks/useFarcaster';
 import { useUserSync } from './hooks/useUserSync';
@@ -16,6 +17,11 @@ const App = () => {
   const [level, setLevel] = useState<Level>(2);
   const [error, setError] = useState<any>(null);
   
+  // Real block state from DB
+  const [isBlocked, setIsBlocked] = useState(false);
+  // Manual test state from Admin Panel
+  const [isMaintenanceTest, setIsMaintenanceTest] = useState(false);
+  
   // Use the consolidated Farcaster hook
   const { user, connectedAddress, connectWallet } = useFarcaster();
 
@@ -28,7 +34,7 @@ const App = () => {
   // Sync user data to Supabase whenever user or wallet changes
   useUserSync(user, connectedAddress, handleError);
 
-  // Initial Setup
+  // Initial Setup & Block Check
   useEffect(() => {
     // Test DB Connection
     const checkDbConnection = async () => {
@@ -50,6 +56,43 @@ const App = () => {
     checkDbConnection();
   }, []);
 
+  // Check if user is blocked
+  useEffect(() => {
+    if (!user) return;
+
+    const checkBlockStatus = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('blocked_users')
+          .select('fid')
+          .eq('fid', user.fid)
+          .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" which is good
+             console.warn("Block check warning:", error);
+        }
+
+        if (data) {
+          setIsBlocked(true);
+        }
+      } catch (e) {
+        console.error("Failed to check block status", e);
+      }
+    };
+
+    checkBlockStatus();
+  }, [user]);
+
+  // Priority 1: Real DB Block (No Back Button)
+  if (isBlocked) {
+    return <MaintenanceScreen />;
+  }
+
+  // Priority 2: Admin Test Mode (With Back Button)
+  if (isMaintenanceTest) {
+    return <MaintenanceScreen onBack={() => setIsMaintenanceTest(false)} />;
+  }
+
   return (
     <>
         {error && <ErrorDialog error={error} onClose={() => setError(null)} />}
@@ -63,6 +106,7 @@ const App = () => {
                 connectedAddress={connectedAddress}
                 connectWallet={connectWallet}
                 onError={handleError}
+                onTestMaintenance={() => setIsMaintenanceTest(true)}
             />
         ) : (
             <Game 

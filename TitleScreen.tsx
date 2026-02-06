@@ -17,11 +17,12 @@ type TitleScreenProps = {
     connectedAddress: string | null;
     connectWallet: () => Promise<void>;
     onError: (error: any) => void;
+    onTestMaintenance: () => void;
 };
 
 type Tab = 'GAME' | 'STATS' | 'LEADERBOARD';
 
-export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, connectWallet, onError }: TitleScreenProps) => {
+export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, connectWallet, onError, onTestMaintenance }: TitleScreenProps) => {
   const [activeTab, setActiveTab] = useState<Tab>('GAME');
   const [showProfile, setShowProfile] = useState(false);
   const [showLightpaper, setShowLightpaper] = useState(false);
@@ -58,7 +59,8 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
                 user={user} 
                 connectedAddress={connectedAddress} 
                 connectWallet={connectWallet} 
-                onClose={() => setShowProfile(false)} 
+                onClose={() => setShowProfile(false)}
+                onTestMaintenance={onTestMaintenance}
             />
         )}
 

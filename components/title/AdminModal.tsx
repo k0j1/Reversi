@@ -6,12 +6,13 @@ import { CONTRACT_ADDRESS, CONTRACT_ABI } from './ClaimBonus';
 
 type AdminModalProps = {
     onClose: () => void;
+    onTestMaintenance: () => void;
 };
 
 // CHH Token Contract Address on Base Mainnet
 const CHH_TOKEN_ADDRESS = "0xb0525542E3D818460546332e76E511562dFf9B07";
 
-export const AdminModal = ({ onClose }: AdminModalProps) => {
+export const AdminModal = ({ onClose, onTestMaintenance }: AdminModalProps) => {
     const [balance, setBalance] = useState<string>('Loading...');
     const [status, setStatus] = useState<'IDLE' | 'PROCESSING' | 'SUCCESS' | 'ERROR'>('IDLE');
     const [statusMsg, setStatusMsg] = useState('');
@@ -123,6 +124,17 @@ export const AdminModal = ({ onClose }: AdminModalProps) => {
                         className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
                     >
                         <span>💸</span> Send CHH
+                    </button>
+                </div>
+
+                {/* Debug Tools */}
+                <div className="space-y-3 pt-4 border-t border-slate-100">
+                     <h3 className="text-sm font-bold text-slate-400 uppercase">Debug Tools</h3>
+                     <button 
+                        onClick={onTestMaintenance}
+                        className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+                    >
+                        <span>🚧</span> Test Maintenance Screen
                     </button>
                 </div>
             </div>

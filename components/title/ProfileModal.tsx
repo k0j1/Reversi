@@ -8,11 +8,12 @@ type ProfileModalProps = {
     connectedAddress: string | null;
     connectWallet: () => Promise<void>;
     onClose: () => void;
+    onTestMaintenance: () => void;
 };
 
 const ADMIN_FIDS = [406233, 1379028];
 
-export const ProfileModal = ({ user, connectedAddress, connectWallet, onClose }: ProfileModalProps) => {
+export const ProfileModal = ({ user, connectedAddress, connectWallet, onClose, onTestMaintenance }: ProfileModalProps) => {
     const [showAdmin, setShowAdmin] = useState(false);
 
     if (!user) return null;
@@ -116,7 +117,7 @@ export const ProfileModal = ({ user, connectedAddress, connectWallet, onClose }:
                 </div>
             </div>
             
-            {showAdmin && <AdminModal onClose={() => setShowAdmin(false)} />}
+            {showAdmin && <AdminModal onClose={() => setShowAdmin(false)} onTestMaintenance={onTestMaintenance} />}
         </>
     );
 };
