@@ -159,7 +159,7 @@ export const StatsView = ({ user, onError }: StatsViewProps) => {
             text += "No games played yet.\n";
         }
 
-        const embedUrl = window.location.href;
+        const embedUrl = "https://farcaster.xyz/miniapps/FYXr6t3KSLwo/reversi";
         const shareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(embedUrl)}`;
 
         sdk.actions.openUrl(shareUrl);

@@ -60,7 +60,7 @@ export const Game = ({ level, onExit, user, connectedAddress, onError }: GamePro
     const text = `${resultTitle}\nReversi (Lv.${level})\nScore: ${scores.black} - ${scores.white}\n\n${emojiBoard}\n`;
 
     // Current URL for embed
-    const embedUrl = window.location.href;
+    const embedUrl = "https://farcaster.xyz/miniapps/FYXr6t3KSLwo/reversi";
 
     // Warpcast Compose URL (Text + Game URL only)
     const shareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(embedUrl)}`;
