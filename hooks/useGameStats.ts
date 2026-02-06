@@ -2,7 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { AppStats, Level, FarcasterUser } from '../types';
 import { supabase } from '../lib/supabase';
-import { INITIAL_STATS, INITIAL_LEVEL_STATS, WIN_MULTIPLIERS } from '../constants';
+import { INITIAL_STATS, WIN_MULTIPLIERS } from '../constants';
 
 const STORAGE_KEY = 'reversi_stats';
 const OLD_STORAGE_KEY = 'reversi_pop_stats';
@@ -24,39 +24,44 @@ export const useGameStats = (
             
             const saveStats = async () => {
                 try {
-                    let stats: AppStats = JSON.parse(JSON.stringify(INITIAL_STATS));
-                    
-                    // 1. Load current stats
+                    // Calculate expected points for display (Toast) only
+                    // Actual calculation happens on server for DB
+                    const isWin = scores.black > scores.white;
+                    let pointsEarned = 0;
+                    if (isWin) {
+                        pointsEarned = scores.black * WIN_MULTIPLIERS[level];
+                    } else {
+                        pointsEarned = scores.black * 1;
+                    }
+
                     if (user) {
-                        const { data, error: fetchError } = await supabase
-                            .from('reversi_game_stats')
-                            .select('points, level_1, level_2, level_3, level_4, level_5')
-                            .eq('fid', user.fid)
-                            .single();
-                        
-                        if (fetchError && fetchError.code !== 'PGRST116') {
-                            // If it's not a "not found" error, report it
-                            console.error("Supabase fetch error:", fetchError);
-                            // We don't block saving, but we warn
+                        // ---------------------------------------------------------
+                        // Secure Server-Side Update (RPC)
+                        // ---------------------------------------------------------
+                        // We send the match result, NOT the new totals.
+                        // The database calculates and increments the values atomically.
+                        const { error } = await supabase.rpc('record_game_result', {
+                            _fid: user.fid,
+                            _level: level,
+                            _user_score: scores.black,
+                            _ai_score: scores.white
+                        });
+
+                        if (error) {
+                            console.error("Supabase RPC error:", error);
+                            onError(error);
+                        } else {
+                            console.log(`Game Saved (Server): Match ended. ${scores.black}-${scores.white}`);
+                            onShowToast(`Record Saved! (+${pointsEarned} pts)`, 'info');
                         }
 
-                        if (data) {
-                            stats.points = data.points || 0;
-                            stats.levels[1] = data.level_1 || { ...INITIAL_LEVEL_STATS };
-                            stats.levels[2] = data.level_2 || { ...INITIAL_LEVEL_STATS };
-                            stats.levels[3] = data.level_3 || { ...INITIAL_LEVEL_STATS };
-                            stats.levels[4] = data.level_4 || { ...INITIAL_LEVEL_STATS };
-                            stats.levels[5] = data.level_5 || { ...INITIAL_LEVEL_STATS };
-                            
-                            stats.total = { win: 0, loss: 0, draw: 0 };
-                            Object.values(stats.levels).forEach((lvlStats: any) => {
-                                stats.total.win += lvlStats.win || 0;
-                                stats.total.loss += lvlStats.loss || 0;
-                                stats.total.draw += lvlStats.draw || 0;
-                            });
-                        }
                     } else {
-                        // LocalStorage Migration Check
+                        // ---------------------------------------------------------
+                        // Local Storage Fallback (Offline / No User)
+                        // ---------------------------------------------------------
+                        let stats: AppStats = JSON.parse(JSON.stringify(INITIAL_STATS));
+                        
+                        // Load existing local stats
                         let stored = localStorage.getItem(STORAGE_KEY);
                         if (!stored) {
                             stored = localStorage.getItem(OLD_STORAGE_KEY);
@@ -74,6 +79,7 @@ export const useGameStats = (
                                     stats.levels[l] = parsed.levels[l];
                                 }
                             });
+                            // Re-calc total
                             stats.total = { win: 0, loss: 0, draw: 0 };
                             Object.values(stats.levels).forEach((lvlStats: any) => {
                                 stats.total.win += lvlStats.win || 0;
@@ -81,60 +87,19 @@ export const useGameStats = (
                                 stats.total.draw += lvlStats.draw || 0;
                             });
                         }
-                    }
 
-                    // 2. Calculate new stats
-                    const isWin = scores.black > scores.white;
-                    const isLoss = scores.black < scores.white;
+                        // Apply result
+                        const isLoss = scores.black < scores.white;
+                        if (isWin) stats.levels[level].win += 1;
+                        else if (isLoss) stats.levels[level].loss += 1;
+                        else stats.levels[level].draw += 1;
 
-                    if (isWin) stats.levels[level].win += 1;
-                    else if (isLoss) stats.levels[level].loss += 1;
-                    else stats.levels[level].draw += 1;
+                        if (isWin) stats.total.win += 1;
+                        else if (isLoss) stats.total.loss += 1;
+                        else stats.total.draw += 1;
 
-                    if (isWin) stats.total.win += 1;
-                    else if (isLoss) stats.total.loss += 1;
-                    else stats.total.draw += 1;
+                        stats.points += pointsEarned;
 
-                    let pointsEarned = 0;
-                    const discCount = scores.black;
-
-                    if (isWin) {
-                        pointsEarned = discCount * WIN_MULTIPLIERS[level];
-                    } else {
-                        pointsEarned = discCount * 1;
-                    }
-
-                    stats.points += pointsEarned;
-                    
-                    // 3. Save stats
-                    if (user) {
-                        const { error } = await supabase
-                            .from('reversi_game_stats')
-                            .upsert({
-                                fid: user.fid,
-                                username: user.username,
-                                display_name: user.displayName,
-                                pfp_url: user.pfpUrl,
-                                custody_address: user.custodyAddress,
-                                verified_addresses: user.verifiedAddresses,
-                                // connected_address removed to fix schema error
-                                points: stats.points,
-                                level_1: stats.levels[1],
-                                level_2: stats.levels[2],
-                                level_3: stats.levels[3],
-                                level_4: stats.levels[4],
-                                level_5: stats.levels[5],
-                            });
-                        
-                        if (error) {
-                            console.error("Supabase upsert error:", error);
-                            // Show Error Dialog
-                            onError(error);
-                        } else {
-                            console.log(`Game Saved (Supabase): Earned ${pointsEarned} pts. Total: ${stats.points}`);
-                            onShowToast("Records Saved Successfully!", 'info');
-                        }
-                    } else {
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
                         console.log(`Game Saved (Local): Earned ${pointsEarned} pts. Total: ${stats.points}`);
                         onShowToast("Game Saved (Local)", 'info');
