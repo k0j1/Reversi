@@ -93,35 +93,6 @@ export const StatsView = ({ user, onError }: StatsViewProps) => {
         loadStats();
     }, [user, onError]);
 
-    const handleReset = async () => {
-        if(confirm("Are you sure you want to reset all records and points?")) {
-            try {
-                if (user) {
-                    const { error } = await supabase.from('reversi_game_stats')
-                        .update({ 
-                            points: 0,
-                            level_1: INITIAL_LEVEL_STATS,
-                            level_2: INITIAL_LEVEL_STATS,
-                            level_3: INITIAL_LEVEL_STATS,
-                            level_4: INITIAL_LEVEL_STATS,
-                            level_5: INITIAL_LEVEL_STATS,
-                        })
-                        .eq('fid', user.fid);
-                    
-                    if (error) throw error;
-                }
-                
-                localStorage.removeItem(STORAGE_KEY);
-                localStorage.removeItem(OLD_STORAGE_KEY);
-                setStats(JSON.parse(JSON.stringify(INITIAL_STATS)));
-                
-            } catch (e) {
-                console.error("Failed to reset stats", e);
-                onError(e);
-            }
-        }
-    };
-
     const getLevelLabel = (l: number) => {
         switch(l) {
             case 1: return 'Beginner';
@@ -263,13 +234,6 @@ export const StatsView = ({ user, onError }: StatsViewProps) => {
                         <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
                     </svg>
                     Share Stats
-                </button>
-
-                <button 
-                    onClick={handleReset}
-                    className="w-full py-2 text-slate-400 text-sm font-bold hover:text-red-500 transition-colors"
-                >
-                    Reset Records
                 </button>
             </div>
         </div>
