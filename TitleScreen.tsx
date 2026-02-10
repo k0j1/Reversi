@@ -111,6 +111,13 @@ export const TitleScreen = ({ level, setLevel, onStart, user, connectedAddress, 
             </div>
         </div>
 
+        {/* Version Number */}
+        <div className="fixed bottom-[5rem] right-4 z-40 pointer-events-none">
+            <span className="bg-white/80 backdrop-blur-md px-2 py-1 rounded-md border border-slate-200 shadow-sm text-[10px] font-bold text-slate-400">
+                Ver.1.01
+            </span>
+        </div>
+
         {/* Bottom Navigation */}
         <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>

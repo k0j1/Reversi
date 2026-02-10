@@ -7,8 +7,13 @@ type LeaderboardViewProps = {
     currentFid?: number;
 };
 
+// Extend the base type to include wins for display
+type LeaderboardDisplayEntry = LeaderboardEntry & {
+    totalWins: number;
+};
+
 export const LeaderboardView = ({ currentFid }: LeaderboardViewProps) => {
-    const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+    const [entries, setEntries] = useState<LeaderboardDisplayEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [fetchError, setFetchError] = useState<boolean>(false);
 
@@ -16,10 +21,10 @@ export const LeaderboardView = ({ currentFid }: LeaderboardViewProps) => {
         const fetchLeaderboard = async () => {
             try {
                 setFetchError(false);
-                // Fetch top 50 users by points
+                // Fetch top 50 users by points, including level stats to calculate wins
                 const { data, error } = await supabase
                     .from('reversi_game_stats')
-                    .select('fid, username, display_name, pfp_url, points')
+                    .select('fid, username, display_name, pfp_url, points, level_1, level_2, level_3, level_4, level_5')
                     .order('points', { ascending: false })
                     .limit(50);
                 
@@ -27,7 +32,26 @@ export const LeaderboardView = ({ currentFid }: LeaderboardViewProps) => {
                     throw error;
                 }
                 
-                setEntries(data || []);
+                // Calculate total wins for each entry
+                const formattedData: LeaderboardDisplayEntry[] = (data || []).map((item: any) => {
+                    let wins = 0;
+                    ['level_1', 'level_2', 'level_3', 'level_4', 'level_5'].forEach(key => {
+                        if (item[key] && typeof item[key] === 'object') {
+                            wins += (item[key].win || 0);
+                        }
+                    });
+
+                    return {
+                        fid: item.fid,
+                        username: item.username,
+                        display_name: item.display_name,
+                        pfp_url: item.pfp_url,
+                        points: item.points,
+                        totalWins: wins
+                    };
+                });
+
+                setEntries(formattedData);
             } catch (e) {
                 console.warn("Failed to load leaderboard", e);
                 // Do not trigger global onError for leaderboard fetch failures
@@ -116,12 +140,19 @@ export const LeaderboardView = ({ currentFid }: LeaderboardViewProps) => {
                                 )}
 
                                 {/* User Info */}
-                                <div className="flex-1 min-w-0">
+                                <div className="flex-1 min-w-0 flex flex-col justify-center">
                                     <div className="font-bold text-slate-700 truncate text-sm">
                                         {entry.display_name}
                                     </div>
-                                    <div className="text-xs font-bold text-slate-400 truncate">
-                                        @{entry.username}
+                                    <div className="flex items-center gap-2">
+                                        <div className="text-xs font-bold text-slate-400 truncate max-w-[80px] sm:max-w-none">
+                                            @{entry.username}
+                                        </div>
+                                        {/* Wins Badge */}
+                                        <div className="flex items-center gap-1 bg-green-50 px-1.5 py-0.5 rounded text-[10px] font-bold text-green-700 border border-green-100 whitespace-nowrap">
+                                            <span>🏆</span>
+                                            <span>{entry.totalWins}</span>
+                                        </div>
                                     </div>
                                 </div>
 
