@@ -1,6 +1,7 @@
 
 import { Level, FarcasterUser } from '../../types';
 import { ClaimBonus } from './ClaimBonus';
+import sdk from '@farcaster/frame-sdk';
 
 type GameMenuProps = {
     level: Level;
@@ -29,6 +30,14 @@ export const GameMenu = ({ level, setLevel, onStart, user }: GameMenuProps) => {
             case 4: return 'bg-orange-100 text-orange-600 border-orange-200';
             case 5: return 'bg-red-100 text-red-600 border-red-200';
             default: return 'bg-slate-100 text-slate-600 border-slate-200';
+        }
+    };
+
+    const handleAddFrame = () => {
+        try {
+            sdk.actions.addFrame();
+        } catch (e) {
+            console.error("Failed to add frame:", e);
         }
     };
 
@@ -84,6 +93,17 @@ export const GameMenu = ({ level, setLevel, onStart, user }: GameMenuProps) => {
 
             {/* Login Bonus Button */}
             <ClaimBonus user={user} />
+
+            {/* Add to Client Button */}
+            <div className="w-full px-2 animate-fade-in">
+                <button
+                    onClick={handleAddFrame}
+                    className="w-full bg-[#7C65C1] hover:bg-[#6952A3] text-white font-bold py-3 px-6 rounded-xl transition-all shadow-sm border-b-4 border-[#5b439b] active:border-b-0 active:translate-y-1 active:shadow-none flex items-center justify-center gap-2"
+                >
+                    <span className="text-xl">📲</span>
+                    <span className="uppercase tracking-wider text-sm">Add to Client</span>
+                </button>
+            </div>
 
             <div className="w-full animate-fade-in flex flex-col items-start gap-3 px-2">
                 <span className="w-full text-left text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Other Apps</span>
