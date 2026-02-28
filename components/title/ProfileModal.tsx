@@ -61,7 +61,7 @@ export const ProfileModal = ({ user, connectedAddress, connectWallet, onClose, o
     const handleConnectGoogle = async () => {
         if (!user) return;
         try {
-            const response = await fetch(`/api/auth/google/url?fid=${user.fid}`);
+            const response = await fetch(`/api/google_url.php?fid=${user.fid}`);
             if (!response.ok) {
                 throw new Error('Failed to get auth URL');
             }
@@ -85,7 +85,7 @@ export const ProfileModal = ({ user, connectedAddress, connectWallet, onClose, o
         if (!user || !confirm('Googleアカウントの連携を解除しますか？')) return;
         setIsLoadingGoogle(true);
         try {
-            const response = await fetch('/api/auth/google/disconnect', {
+            const response = await fetch('/api/google_disconnect.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ fid: user.fid })

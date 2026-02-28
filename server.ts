@@ -23,14 +23,14 @@ const appUrl = process.env.APP_URL || 'http://localhost:3000';
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  `${appUrl}/api/auth/google/callback`
+  `${appUrl}/api/google_callback.php`
 );
 
 // Store fid temporarily (in-memory, for simplicity in this demo)
 // In a real app, use a secure session or state parameter
 const stateMap = new Map<string, string>(); // state -> fid
 
-app.get("/api/auth/google/url", (req, res) => {
+app.get(["/api/auth/google/url", "/api/google_url.php"], (req, res) => {
   const fid = req.query.fid as string;
   if (!fid) {
     return res.status(400).json({ error: "fid is required" });
@@ -52,7 +52,7 @@ app.get("/api/auth/google/url", (req, res) => {
   res.json({ url });
 });
 
-app.get("/api/auth/google/callback", async (req, res) => {
+app.get(["/api/auth/google/callback", "/api/google_callback.php"], async (req, res) => {
   const { code, state } = req.query;
 
   if (!code || !state || typeof code !== "string" || typeof state !== "string") {
@@ -134,7 +134,7 @@ app.get("/api/auth/google/callback", async (req, res) => {
 });
 
 // Disconnect Google Account
-app.post("/api/auth/google/disconnect", async (req, res) => {
+app.post(["/api/auth/google/disconnect", "/api/google_disconnect.php"], async (req, res) => {
     const { fid } = req.body;
     if (!fid) {
         return res.status(400).json({ error: "fid is required" });
