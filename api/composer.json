@@ -16,6 +16,9 @@
         "platform-check": false,
         "platform": {
             "php": "7.4.33"
+        },
+        "audit": {
+            "block-insecure": false
         }
     }
 }
