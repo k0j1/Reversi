@@ -37,23 +37,20 @@ if (!$fid) {
 }
 
 $clientId = $_ENV['GOOGLE_CLIENT_ID'] ?? getenv('GOOGLE_CLIENT_ID');
-$clientSecret = $_ENV['GOOGLE_CLIENT_SECRET'] ?? getenv('GOOGLE_CLIENT_SECRET');
 $appUrl = $_ENV['APP_URL'] ?? getenv('APP_URL') ?? 'https://reversi.k0j1.v2002.coreserver.jp';
 
-$client = new Google\Client();
-$client->setClientId($clientId);
-$client->setClientSecret($clientSecret);
-$client->setRedirectUri($appUrl . '/api/google_callback.php');
-$client->addScope("email");
-$client->addScope("profile");
-$client->setAccessType('offline');
-$client->setPrompt('consent');
-
-// Generate state and store it in a simple file-based cache or just pass fid in state
-// Since we don't have a session, we can encode fid into the state
 $state = base64_encode(json_encode(['fid' => $fid, 'nonce' => bin2hex(random_bytes(16))]));
-$client->setState($state);
 
-$authUrl = $client->createAuthUrl();
+$params = [
+    'client_id' => $clientId,
+    'redirect_uri' => $appUrl . '/api/google_callback.php',
+    'response_type' => 'code',
+    'scope' => 'email profile',
+    'access_type' => 'offline',
+    'prompt' => 'consent',
+    'state' => $state
+];
+
+$authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($params);
 
 echo json_encode(['url' => $authUrl]);

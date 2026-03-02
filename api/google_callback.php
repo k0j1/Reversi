@@ -48,26 +48,52 @@ if (!$fid) {
 $clientId = $_ENV['GOOGLE_CLIENT_ID'] ?? getenv('GOOGLE_CLIENT_ID');
 $clientSecret = $_ENV['GOOGLE_CLIENT_SECRET'] ?? getenv('GOOGLE_CLIENT_SECRET');
 $appUrl = $_ENV['APP_URL'] ?? getenv('APP_URL') ?? 'https://reversi.k0j1.v2002.coreserver.jp';
-
-$client = new Google\Client();
-$client->setClientId($clientId);
-$client->setClientSecret($clientSecret);
-$client->setRedirectUri($appUrl . '/api/google_callback.php');
+$redirectUri = $appUrl . '/api/google_callback.php';
 
 try {
-    $token = $client->fetchAccessTokenWithAuthCode($code);
-    if (isset($token['error'])) {
-        throw new Exception($token['error_description'] ?? $token['error']);
+    // 1. Exchange code for token
+    $ch = curl_init('https://oauth2.googleapis.com/token');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+        'client_id' => $clientId,
+        'client_secret' => $clientSecret,
+        'code' => $code,
+        'grant_type' => 'authorization_code',
+        'redirect_uri' => $redirectUri
+    ]));
+    $tokenResponse = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode >= 400) {
+        throw new Exception("Token exchange failed: " . $tokenResponse);
     }
-    $client->setAccessToken($token);
 
-    $oauth2 = new Google\Service\Oauth2($client);
-    $userInfo = $oauth2->userinfo->get();
+    $tokenData = json_decode($tokenResponse, true);
+    $accessToken = $tokenData['access_token'] ?? null;
+    $refreshToken = $tokenData['refresh_token'] ?? null;
 
-    $googleId = $userInfo->id;
-    $googleEmail = $userInfo->email;
-    $googleName = $userInfo->name;
-    $refreshToken = $token['refresh_token'] ?? null;
+    if (!$accessToken) {
+        throw new Exception("No access token received");
+    }
+
+    // 2. Fetch user info
+    $ch2 = curl_init('https://www.googleapis.com/oauth2/v2/userinfo');
+    curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch2, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $accessToken]);
+    $userInfoResponse = curl_exec($ch2);
+    $httpCode2 = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
+    curl_close($ch2);
+
+    if ($httpCode2 >= 400) {
+        throw new Exception("User info fetch failed: " . $userInfoResponse);
+    }
+
+    $userInfo = json_decode($userInfoResponse, true);
+    $googleId = $userInfo['id'] ?? null;
+    $googleEmail = $userInfo['email'] ?? null;
+    $googleName = $userInfo['name'] ?? null;
 
     if (!$googleId || !$googleEmail) {
         throw new Exception("Missing Google user info");
