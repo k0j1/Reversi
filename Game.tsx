@@ -57,7 +57,7 @@ export const Game = ({ level, onExit, user, connectedAddress, onError }: GamePro
 
     // Construct Text
     const resultTitle = isWin ? "🏆 VICTORY!" : isDraw ? "🤝 DRAW" : "💀 DEFEAT";
-    const text = `${resultTitle}\nReversi (Lv.${level})\nScore: ${scores.black} - ${scores.white}\n\n${emojiBoard}\n`;
+    const text = `${resultTitle}\nReversi (Lv.${level})\nScore: ${scores.black} - ${scores.white}\n\n${emojiBoard}\n\n#Reversi\n`;
 
     // Current URL for embed
     const embedUrl = "https://farcaster.xyz/miniapps/FYXr6t3KSLwo/reversi";
