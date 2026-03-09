@@ -113,7 +113,7 @@ export const StatsView = ({ user, onError }: StatsViewProps) => {
         let text = `📊 My Reversi Stats\n\n` +
                      `Points: ${stats.points.toLocaleString()}\n` +
                      `Total: ${stats.total.win}W ${stats.total.loss}L ${stats.total.draw}D (${winRate}%)\n\n` +
-                     `#Reversi\n`;
+                     `#Reversi #CHH\n`;
 
         // Add Level Breakdown
         let hasLevelStats = false;
