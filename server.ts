@@ -138,7 +138,7 @@ app.post(["/api/auth/google/disconnect", "/api/google_disconnect.php"], async (r
             .from("google_accounts")
             .select("google_id")
             .eq("fid", fid)
-            .single();
+            .maybeSingle();
 
         if (accountSelectError || !accountData?.google_id) {
             return res.json({ success: true, message: "Already disconnected" });

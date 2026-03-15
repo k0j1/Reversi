@@ -66,7 +66,7 @@ const App = () => {
           .from('blocked_users')
           .select('fid')
           .eq('fid', user.fid)
-          .single();
+          .maybeSingle();
 
         if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" which is good
              console.warn("Block check warning:", error);

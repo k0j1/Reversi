@@ -18,7 +18,7 @@ export const useUserSync = (
                     .from('reversi_game_stats')
                     .select('fid')
                     .eq('fid', user.fid)
-                    .single();
+                    .maybeSingle();
 
                 if (error && error.code !== 'PGRST116') {
                     console.warn("User sync check failed (offline?):", error);
@@ -40,7 +40,7 @@ export const useUserSync = (
                     .from('farcaster_users')
                     .select('fid')
                     .eq('fid', user.fid)
-                    .single();
+                    .maybeSingle();
                 
                 if (existingUser) {
                     await supabase
@@ -58,7 +58,7 @@ export const useUserSync = (
                     .from('reversi_game_stats')
                     .select('fid')
                     .eq('fid', user.fid)
-                    .single();
+                    .maybeSingle();
 
                 if (!existingStats) {
                     await supabase

@@ -27,7 +27,7 @@ export const StatsView = ({ user, onError }: StatsViewProps) => {
                         .from('reversi_game_stats')
                         .select('points, claimed_score, level_1, level_2, level_3, level_4, level_5')
                         .eq('fid', user.fid)
-                        .single();
+                        .maybeSingle();
                     
                     if (data) {
                         loadedStats.points = data.points || 0;

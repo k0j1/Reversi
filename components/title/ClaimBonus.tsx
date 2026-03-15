@@ -48,7 +48,7 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
                     .from('reversi_game_stats')
                     .select('points, claimed_score, last_login_bonus')
                     .eq('fid', user.fid)
-                    .single();
+                    .maybeSingle();
 
                 if (error) {
                     console.error("Error fetching claim data:", error);
@@ -189,7 +189,7 @@ export const ClaimBonus = ({ user }: ClaimBonusProps) => {
                 .from('reversi_game_stats')
                 .select('claimed_score')
                 .eq('fid', user.fid)
-                .single();
+                .maybeSingle();
             
             const currentClaimed = currentData?.claimed_score || 0;
             const currentReward = Math.max(0, claimableTotal - 500); 

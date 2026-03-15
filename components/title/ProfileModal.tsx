@@ -29,7 +29,7 @@ export const ProfileModal = ({ user, connectedAddress, connectWallet, onClose, o
                     .from('google_accounts')
                     .select('google_email')
                     .eq('fid', user.fid)
-                    .single();
+                    .maybeSingle();
                 
                 if (data && !error) {
                     setGoogleEmail(data.google_email);
