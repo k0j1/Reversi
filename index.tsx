@@ -65,14 +65,13 @@ const App = () => {
         const { data, error } = await supabase
           .from('blocked_users')
           .select('fid')
-          .eq('fid', user.fid)
-          .maybeSingle();
+          .eq('fid', user.fid);
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" which is good
+        if (error) {
              console.warn("Block check warning:", error);
         }
 
-        if (data) {
+        if (data && data.length > 0) {
           setIsBlocked(true);
         }
       } catch (e) {
