@@ -21,10 +21,11 @@ export const LeaderboardView = ({ currentFid }: LeaderboardViewProps) => {
         const fetchLeaderboard = async () => {
             try {
                 setFetchError(false);
+
                 // Fetch top 50 users by points, including level stats to calculate wins
                 const { data, error } = await supabase
                     .from('reversi_game_stats')
-                    .select('fid, points, level_1, level_2, level_3, level_4, level_5, farcaster_users(username, display_name, pfp_url)')
+                    .select('fid, points, level_1, level_2, level_3, level_4, level_5, farcaster_users!reversi_game_stats_fid_fkey(username, display_name, pfp_url)')
                     .order('points', { ascending: false })
                     .limit(50);
                 
@@ -41,7 +42,7 @@ export const LeaderboardView = ({ currentFid }: LeaderboardViewProps) => {
                         }
                     });
 
-                    const user = item.farcaster_users || {};
+                    const user = Array.isArray(item.farcaster_users) ? item.farcaster_users[0] : (item.farcaster_users || {});
 
                     return {
                         fid: item.fid,
