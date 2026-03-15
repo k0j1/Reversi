@@ -100,16 +100,8 @@ app.get(["/api/auth/google/callback", "/api/google_callback.php"], async (req, r
       throw googleError;
     }
 
-    // 2. Update reversi_game_stats with google_id
-    const { error: statsError } = await supabase
-      .from("reversi_game_stats")
-      .update({ google_id: googleId })
-      .eq("fid", parseInt(fid, 10));
-
-    if (statsError) {
-      console.error("Error updating game stats:", statsError);
-      throw statsError;
-    }
+    // 2. Update reversi_game_stats (no longer need google_id here)
+    // No action needed for reversi_game_stats
 
     // Send success message to parent window and close popup
     res.send(`
@@ -141,28 +133,20 @@ app.post(["/api/auth/google/disconnect", "/api/google_disconnect.php"], async (r
     }
 
     try {
-        // 1. Get google_id from stats
-        const { data: statsData, error: statsSelectError } = await supabase
-            .from("reversi_game_stats")
+        // 1. Get google_id from google_accounts
+        const { data: accountData, error: accountSelectError } = await supabase
+            .from("google_accounts")
             .select("google_id")
             .eq("fid", fid)
             .single();
 
-        if (statsSelectError || !statsData?.google_id) {
+        if (accountSelectError || !accountData?.google_id) {
             return res.json({ success: true, message: "Already disconnected" });
         }
 
-        const googleId = statsData.google_id;
+        const googleId = accountData.google_id;
 
-        // 2. Remove google_id from stats
-        const { error: statsUpdateError } = await supabase
-            .from("reversi_game_stats")
-            .update({ google_id: null })
-            .eq("fid", fid);
-
-        if (statsUpdateError) throw statsUpdateError;
-
-        // 3. Delete from google_accounts
+        // 2. Delete from google_accounts
         const { error: deleteError } = await supabase
             .from("google_accounts")
             .delete()

@@ -14,7 +14,7 @@ export const useUserSync = (
         const syncUser = async () => {
             try {
                 // Check if user exists to decide between update (profile only) or insert (init stats)
-                const { data: existing, error } = await supabase
+                const { error } = await supabase
                     .from('reversi_game_stats')
                     .select('fid')
                     .eq('fid', user.fid)
@@ -31,29 +31,40 @@ export const useUserSync = (
                     username: user.username,
                     display_name: user.displayName,
                     pfp_url: user.pfpUrl,
-                    custody_address: user.custodyAddress,
+                    address: user.custodyAddress,
                     verified_addresses: user.verifiedAddresses
-                    // connected_address removed to fix schema error
                 };
 
-                if (existing) {
-                    // User exists: Update profile info only to preserve stats/points
-                    const { error: updateError } = await supabase
-                        .from('reversi_game_stats')
+                // 1. farcaster_users テーブルへの同期
+                const { data: existingUser } = await supabase
+                    .from('farcaster_users')
+                    .select('fid')
+                    .eq('fid', user.fid)
+                    .single();
+                
+                if (existingUser) {
+                    await supabase
+                        .from('farcaster_users')
                         .update(profileData)
                         .eq('fid', user.fid);
-                    
-                    if (updateError) {
-                        console.warn("Failed to update user profile:", updateError);
-                    } else {
-                        console.log("User profile synced to Supabase");
-                    }
                 } else {
-                    // New user: Insert with initial stats (split into level columns)
-                    const { error: insertError } = await supabase
+                    await supabase
+                        .from('farcaster_users')
+                        .insert(profileData);
+                }
+
+                // 2. reversi_game_stats テーブルへの同期（statsのみ）
+                const { data: existingStats } = await supabase
+                    .from('reversi_game_stats')
+                    .select('fid')
+                    .eq('fid', user.fid)
+                    .single();
+
+                if (!existingStats) {
+                    await supabase
                         .from('reversi_game_stats')
                         .insert({
-                            ...profileData,
+                            fid: user.fid,
                             points: 0,
                             level_1: INITIAL_LEVEL_STATS,
                             level_2: INITIAL_LEVEL_STATS,
@@ -61,12 +72,6 @@ export const useUserSync = (
                             level_4: INITIAL_LEVEL_STATS,
                             level_5: INITIAL_LEVEL_STATS
                         });
-
-                    if (insertError) {
-                         console.warn("Failed to create new user record:", insertError);
-                    } else {
-                        console.log("New user record created in Supabase");
-                    }
                 }
             } catch (e) {
                 console.warn("Unexpected error syncing user:", e);

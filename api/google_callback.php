@@ -132,23 +132,7 @@ try {
     }
 
     // 2. Update reversi_game_stats
-    $statsData = ['google_id' => $googleId];
-    $ch2 = curl_init($supabaseUrl . '/rest/v1/reversi_game_stats?fid=eq.' . $fid);
-    curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch2, CURLOPT_CUSTOMREQUEST, 'PATCH');
-    curl_setopt($ch2, CURLOPT_POSTFIELDS, json_encode($statsData));
-    curl_setopt($ch2, CURLOPT_HTTPHEADER, [
-        'apikey: ' . $supabaseKey,
-        'Authorization: Bearer ' . $supabaseKey,
-        'Content-Type: application/json'
-    ]);
-    $response2 = curl_exec($ch2);
-    $httpCode2 = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
-    curl_close($ch2);
-
-    if ($httpCode2 >= 400) {
-        throw new Exception("Supabase reversi_game_stats update failed: " . $response2);
-    }
+    // No action needed for reversi_game_stats
 
     echo "
     <html>

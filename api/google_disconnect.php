@@ -43,8 +43,8 @@ $supabaseUrl = $_ENV['VITE_SUPABASE_URL'] ?? getenv('VITE_SUPABASE_URL');
 $supabaseKey = $_ENV['SUPABASE_SERVICE_ROLE_KEY'] ?? getenv('SUPABASE_SERVICE_ROLE_KEY') ?? $_ENV['VITE_SUPABASE_ANON_KEY'] ?? getenv('VITE_SUPABASE_ANON_KEY');
 
 try {
-    // 1. Get google_id from stats
-    $ch = curl_init($supabaseUrl . '/rest/v1/reversi_game_stats?select=google_id&fid=eq.' . $fid);
+    // 1. Get google_id from google_accounts
+    $ch = curl_init($supabaseUrl . '/rest/v1/google_accounts?select=google_id&fid=eq.' . $fid);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'apikey: ' . $supabaseKey,
@@ -66,26 +66,7 @@ try {
 
     $googleId = $data[0]['google_id'];
 
-    // 2. Remove google_id from stats
-    $statsData = ['google_id' => null];
-    $ch2 = curl_init($supabaseUrl . '/rest/v1/reversi_game_stats?fid=eq.' . $fid);
-    curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch2, CURLOPT_CUSTOMREQUEST, 'PATCH');
-    curl_setopt($ch2, CURLOPT_POSTFIELDS, json_encode($statsData));
-    curl_setopt($ch2, CURLOPT_HTTPHEADER, [
-        'apikey: ' . $supabaseKey,
-        'Authorization: Bearer ' . $supabaseKey,
-        'Content-Type: application/json'
-    ]);
-    $response2 = curl_exec($ch2);
-    $httpCode2 = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
-    curl_close($ch2);
-
-    if ($httpCode2 >= 400) {
-        throw new Exception("Supabase reversi_game_stats update failed: " . $response2);
-    }
-
-    // 3. Delete from google_accounts
+    // 2. Delete from google_accounts
     $ch3 = curl_init($supabaseUrl . '/rest/v1/google_accounts?google_id=eq.' . urlencode($googleId));
     curl_setopt($ch3, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch3, CURLOPT_CUSTOMREQUEST, 'DELETE');
