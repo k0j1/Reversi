@@ -26,14 +26,14 @@ export const useUserSync = (
                     return;
                 }
 
-                const profileData = {
+                const profileData: any = {
                     fid: user.fid,
-                    username: user.username,
-                    display_name: user.displayName,
-                    pfp_url: user.pfpUrl,
-                    address: user.custodyAddress,
-                    verified_addresses: user.verifiedAddresses
                 };
+                if (user.username !== null && user.username !== undefined) profileData.username = user.username;
+                if (user.displayName !== null && user.displayName !== undefined) profileData.display_name = user.displayName;
+                if (user.pfpUrl !== null && user.pfpUrl !== undefined) profileData.pfp_url = user.pfpUrl;
+                if (user.custodyAddress !== null && user.custodyAddress !== undefined) profileData.address = user.custodyAddress;
+                if (user.verifiedAddresses !== null && user.verifiedAddresses !== undefined) profileData.verified_addresses = user.verifiedAddresses;
 
                 // 1. farcaster_users テーブルへの同期
                 const { data: existingUser } = await supabase
