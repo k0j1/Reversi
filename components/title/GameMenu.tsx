@@ -138,7 +138,7 @@ export const GameMenu = ({ level, setLevel, onStart, user }: GameMenuProps) => {
                         />
                     </a>
                     <a 
-                        href="https://farcaster.xyz/k0j1/0x6f23ef24" 
+                        href="https://farcaster.xyz/k0j1/0x5c603e59" 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="group relative block w-16 h-16 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 ring-4 ring-white"
